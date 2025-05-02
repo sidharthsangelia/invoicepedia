@@ -1,23 +1,22 @@
 import { db } from "@/db";
 import { Customers, Invoices } from "@/db/schema";
+
 import { auth } from "@clerk/nextjs/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Invoice from "./Invoice";
 
-interface InvoicePageParams {
-  invoiceId: string;
+interface PageProps {
+  params: {
+    invoiceId: string;
+  };
 }
 
-export default async function InvoicePage({
-  params,
-}: {
-  params: InvoicePageParams; // Explicitly type the params here
-}) {
+export default async function InvoicePage({ params }: PageProps) {
   const { userId, orgId } = await auth();
   if (!userId) return;
-  const invoiceId = parseInt(params.invoiceId);
 
+  const invoiceId = parseInt(params.invoiceId);
   if (isNaN(invoiceId)) {
     throw new Error("Invalid Invoice Id");
   }
@@ -52,10 +51,10 @@ export default async function InvoicePage({
     notFound();
   }
 
-  const invoices = {
+  const invoice = {
     ...result.invoices,
     customer: result.customers,
   };
 
-  return <Invoice invoice={invoices} />;
+  return <Invoice invoice={invoice} />;
 }
