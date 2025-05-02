@@ -6,13 +6,12 @@ import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Invoice from "./Invoice";
 
-interface PageProps {
-  params: {
-    invoiceId: string;
-  };
-}
-
-export default async function InvoicePage({ params }: PageProps) {
+// ✅ Inline typing for the params object — avoids mismatch
+export default async function InvoicePage({
+  params,
+}: {
+  params: { invoiceId: string };
+}) {
   const { userId, orgId } = await auth();
   if (!userId) return;
 
