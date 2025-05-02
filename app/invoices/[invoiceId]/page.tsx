@@ -6,12 +6,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Invoice from "./Invoice";
 
-// ✅ Inline typing for the params object — avoids mismatch
-export default async function InvoicePage({
-  params,
-}: {
-  params: { invoiceId: string };
-}) {
+// ✅ This signature exactly matches what Next.js expects
+export default async function Page({ params }: { params: { invoiceId: string } }) {
   const { userId, orgId } = await auth();
   if (!userId) return;
 
