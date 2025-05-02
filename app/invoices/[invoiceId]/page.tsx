@@ -1,15 +1,18 @@
 import { db } from "@/db";
 import { Customers, Invoices } from "@/db/schema";
-
 import { auth } from "@clerk/nextjs/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Invoice from "./Invoice";
 
+interface InvoicePageParams {
+  invoiceId: string;
+}
+
 export default async function InvoicePage({
   params,
 }: {
-  params: { invoiceId: string };
+  params: InvoicePageParams; // Explicitly type the params here
 }) {
   const { userId, orgId } = await auth();
   if (!userId) return;
@@ -44,6 +47,7 @@ export default async function InvoicePage({
       )
       .limit(1);
   }
+
   if (!result) {
     notFound();
   }
