@@ -7,7 +7,9 @@ import { notFound } from "next/navigation";
 import Invoice from "./Invoice";
 
 // ✅ This signature exactly matches what Next.js expects
-export default async function Page({ params }: { params: { invoiceId: string } }) {
+export default async function InvoicePage({
+  params,
+}: { params: { invoiceId: string } }) {
   const { userId, orgId } = await auth();
   if (!userId) return;
 
