@@ -15,23 +15,24 @@ import { notFound } from "next/navigation";
 
 const stripe = new Stripe(String(process.env.STRIPE_API_SECRET));
 
+// Define the props type to handle dynamic params and searchParams correctly
 interface InvoicePageProps {
-  params: { invoiceId: string };
-  searchParams: {
-    status: string;
-    session_id: string;
-  };
+  params: Promise<{ invoiceId: string }>;
+  searchParams: Promise<{ status?: string; session_id?: string }>;
 }
 
 export default async function InvoicePage({
   params,
   searchParams,
 }: InvoicePageProps) {
-  const invoiceId = Number.parseInt(params.invoiceId);
+  // Await params and searchParams to resolve the Promises
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
 
-  const sessionId = searchParams.session_id;
-  const isSuccess = sessionId && searchParams.status === "success";
-  const isCanceled = searchParams.status === "canceled";
+  const invoiceId = Number.parseInt(resolvedParams.invoiceId);
+  const sessionId = resolvedSearchParams.session_id;
+  const isSuccess = sessionId && resolvedSearchParams.status === "success";
+  const isCanceled = resolvedSearchParams.status === "canceled";
   let isError = isSuccess && !sessionId;
 
   console.log("isSuccess", isSuccess);
@@ -42,9 +43,7 @@ export default async function InvoicePage({
   }
 
   if (isSuccess) {
-    const { payment_status } = await stripe.checkout.sessions.retrieve(
-      sessionId
-    );
+    const { payment_status } = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (payment_status !== "paid") {
       isError = true;
