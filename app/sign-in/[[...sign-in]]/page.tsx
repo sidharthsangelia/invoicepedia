@@ -33,18 +33,18 @@ export default function SignInPage() {
             </h1>
           </header>
           <Clerk.GlobalError className="block text-sm text-red-600" />
-          <Clerk.Field name="identifier">
+          <Clerk.Field name="identifier" className="">
             <Clerk.Label className="sr-only">Email</Clerk.Label>
             <Clerk.Input
               type="email"
               required
               placeholder="Email"
-              className="w-full border-b px-4 py-2 border-neutral-200 bg-white pb-2 text-sm/6 text-neutral-950 outline-none placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-600 data-[invalid]:border-red-600 data-[invalid]:text-red-600"
+              className=" w-full rounded-sm border-b px-4 py-2 border-neutral-200 bg-white pb-2 text-sm/6 text-neutral-950 outline-none placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-600 data-[invalid]:border-red-600 data-[invalid]:text-red-600"
             />
             <Clerk.FieldError className="mt-2 block text-xs text-red-600" />
           </Clerk.Field>
-          <SignIn.Action submit asChild>
-            <Button className="w-full text-bold text-white">Sign In</Button>
+          <SignIn.Action submit asChild className="">
+            <Button className=" w-full text-bold text-white">Sign In</Button>
           </SignIn.Action>
           <div className=" ">
             <p className="mb-4 text-center text-sm/5 text-neutral-500">
