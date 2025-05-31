@@ -31,11 +31,11 @@ export const Cover = ({
       );
       setBeamPositions(positions);
     }
-  }, );
+  }, [ref.current]);
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => setHovered(false)}
       onMouseLeave={() => setHovered(false)}
       ref={ref}
       className="relative hover:bg-neutral-900  group/cover inline-block dark:bg-neutral-900 bg-neutral-100 px-2 py-2  transition duration-200 rounded-sm"
@@ -212,7 +212,7 @@ export const Beam = ({
 
 export const CircleIcon = ({
   className,
-
+  delay,
 }: {
   className?: string;
   delay?: number;

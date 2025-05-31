@@ -23,18 +23,18 @@ const reviews = [
   },
   {
     name: "Jenny",
-    username: "@jenny",
+    username: "@jennydd",
     body: "I'm at a loss for words. This is amazing. I love it.",
     img: "https://brandlogos.net/wp-content/uploads/2025/05/pinterest_2017-logo_brandlogos.net_b92ci-512x95.png",
   },
   {
     name: "sid",
-    username: "@jenny",
+    username: "@jendny",
     body: "I'm at a loss for words. This is amazing. I love it.",
     img: "https://brandlogos.net/wp-content/uploads/2025/04/gate.io-logo_brandlogos.net_ijvu0-512x117.png"},
   {
     name: "sidd",
-    username: "@jenny",
+    username: "@jeddsnny",
     body: "I'm at a loss for words. This is amazing. I love it.",
     img: "https://brandlogos.net/wp-content/uploads/2025/04/acorns-logo_brandlogos.net_yzwxi-512x139.png"},
  
