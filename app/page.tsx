@@ -1,31 +1,27 @@
-
+import BuiltForEveryone from "@/components/BuiltForEveryone";
 import Hero from "@/components/Hero";
+import { DotPattern } from "@/components/magicui/dot-pattern";
 import TrustedPartners from "@/components/TrustedPartners";
-
-
-
-
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
-    // <main className="flex flex-col justify-center h-[100vh] text-center max-w-5xl gap-6 mx-auto">
-    //   <Container>
-    //   <h1 className="text-5xl font-bold">Invoicipedia</h1>
-    //   <p>
-      
-    //     <Button asChild>
-    //       <Link href="/dashboard">Sign In</Link>
-    //     </Button>
-    //   </p>
-    //   </Container>
-    // </main>
+  
 
     <>
-    <div className=''>
+      <div className="">
+        <Hero />
+        <DotPattern
+          className={cn(
+            "[mask-image:radial-gradient(300px_circle_at_center,white,transparent)]"
+          )}
+        />
+        <TrustedPartners />
 
-    <Hero/>
-    <TrustedPartners/>
-    </div>
+        <div className="mt-20 mx-auto flex justify-center">
+          <BuiltForEveryone />
+        </div>
+      </div>
     </>
   );
 }

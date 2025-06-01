@@ -6,11 +6,11 @@ import * as SignIn from "@clerk/elements/sign-in";
 
 export default function SignInPage() {
   return (
-    <div className="grid w-full flex-grow items-center  px-4 sm:justify-center">
+    <div className="grid  md:w-full flex-grow items-center  px-4 sm:justify-center">
       <SignIn.Root>
         <SignIn.Step
           name="start"
-          className="w-full space-y-6 rounded-2xl px-4 py-10 sm:w-96 sm:px-8"
+          className="md:w-full space-y-6 rounded-2xl px-4 py-10 sm:w-96 sm:px-8"
         >
           <header className="text-center">
             <svg

@@ -22,7 +22,7 @@ export default function Hero() {
         </p>
         <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-4">
           <Button size="lg" className="">
-            <Link className="flex flex-row " href="/dashboard">
+            <Link className="flex flex-row space-x-2 items-center" href="/dashboard">
               Explore Now
               <ArrowRight />
             </Link>

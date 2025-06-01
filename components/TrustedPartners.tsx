@@ -67,7 +67,7 @@ const ReviewCard = ({
 export default function TrustedPartners() {
   return (
     <div className="relative flex w-[30rem] md:w-5xl mx-auto flex-col items-center justify-center overflow-hidden">
-      <span className="mt-6 mb-10"><h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">Trusted buy the Giants</h1></span>
+      <span className="mt-6 mb-10"><h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Trusted by the Giants</h1></span>
       <Marquee pauseOnHover className="[--duration:20s]">
         {firstRow.map((review) => (
           <ReviewCard key={review.username} {...review} />
