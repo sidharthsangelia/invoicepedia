@@ -4,58 +4,45 @@ import Stripe from "stripe";
 
 import Container from "@/components/Container";
 import { Badge } from "@/components/ui/badge";
-import { Customers, Invoices } from "@/db/schema";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { Button } from "@/components/ui/button";
-
 import { createPayment, updateStatusAction } from "@/app/actions";
+import { Customers, Invoices } from "@/db/schema";
 import { db } from "@/db";
 import { notFound } from "next/navigation";
 
 const stripe = new Stripe(String(process.env.STRIPE_API_SECRET));
 
-// Define the props type to handle dynamic params and searchParams correctly
 interface InvoicePageProps {
   params: Promise<{ invoiceId: string }>;
   searchParams: Promise<{ status?: string; session_id?: string }>;
 }
 
-export default async function InvoicePage({
-  params,
-  searchParams,
-}: InvoicePageProps) {
-  // Await params and searchParams to resolve the Promises
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
+export default async function InvoicePage({ params, searchParams }: InvoicePageProps) {
+  const { invoiceId } = await params;
+  const { session_id, status } = await searchParams;
 
-  const invoiceId = Number.parseInt(resolvedParams.invoiceId);
-  const sessionId = resolvedSearchParams.session_id;
-  const isSuccess = sessionId && resolvedSearchParams.status === "success";
-  const isCanceled = resolvedSearchParams.status === "canceled";
-  let isError = isSuccess && !sessionId;
+  const id = parseInt(invoiceId);
+  if (isNaN(id)) throw new Error("Invalid invoice ID");
 
-  console.log("isSuccess", isSuccess);
-  console.log("isCanceled", isCanceled);
-
-  if (Number.isNaN(invoiceId)) {
-    throw new Error("Invalid Invoice ID");
-  }
+  const isSuccess = status === "success" && session_id;
+  const isCanceled = status === "canceled";
+  let isError = status === "success" && !session_id;
 
   if (isSuccess) {
-    const { payment_status } = await stripe.checkout.sessions.retrieve(sessionId);
-
-    if (payment_status !== "paid") {
-      isError = true;
-    } else {
+    const session = await stripe.checkout.sessions.retrieve(session_id!);
+    if (session.payment_status === "paid") {
       const formData = new FormData();
-      formData.append("id", String(invoiceId));
+      formData.append("id", invoiceId);
       formData.append("status", "paid");
       await updateStatusAction(formData);
+    } else {
+      isError = true;
     }
   }
 
-  const [result] = await db
+  const [invoice] = await db
     .select({
       id: Invoices.id,
       status: Invoices.status,
@@ -66,99 +53,95 @@ export default async function InvoicePage({
     })
     .from(Invoices)
     .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
-    .where(eq(Invoices.id, invoiceId))
+    .where(eq(Invoices.id, id))
     .limit(1);
 
-  if (!result) {
-    notFound();
-  }
-
-  const invoice = {
-    ...result,
-    customer: {
-      name: result.name,
-    },
-  };
+  if (!invoice) notFound();
 
   return (
-    <main className="w-full h-full">
+    <main className="min-h-[80vh] py-10">
       <Container>
         {isError && (
-          <p className="bg-red-100 text-sm text-red-800 text-center px-3 py-2 rounded-lg mb-6">
-            Something went wrong, please try again!
-          </p>
+          <AlertMessage type="error" message="Something went wrong, please try again." />
         )}
         {isCanceled && (
-          <p className="bg-yellow-100 text-sm text-yellow-800 text-center px-3 py-2 rounded-lg mb-6">
-            Payment was canceled, please try again.
-          </p>
+          <AlertMessage type="warning" message="Payment was canceled, please try again." />
         )}
-        <div className="grid grid-cols-2">
+
+        <div className="grid md:grid-cols-2 gap-10 mb-12">
           <div>
-            <div className="flex justify-between mb-8">
-              <h1 className="flex items-center gap-4 text-3xl font-semibold">
-                Invoice {invoice.id}
-                <Badge
-                  className={cn(
-                    "rounded-full capitalize",
-                    invoice.status === "open" && "bg-blue-500",
-                    invoice.status === "paid" && "bg-green-600",
-                    invoice.status === "void" && "bg-zinc-700",
-                    invoice.status === "uncollectible" && "bg-red-600"
-                  )}
-                >
-                  {invoice.status}
-                </Badge>
-              </h1>
-            </div>
+            <h1 className="text-3xl font-semibold flex items-center gap-4 mb-4">
+              Invoice #{invoice.id}
+              <Badge
+                className={cn(
+                  "capitalize px-3 py-1 text-white text-sm rounded-full",
+                  invoice.status === "open" && "bg-blue-500",
+                  invoice.status === "paid" && "bg-green-600",
+                  invoice.status === "void" && "bg-zinc-700",
+                  invoice.status === "uncollectible" && "bg-red-600"
+                )}
+              >
+                {invoice.status}
+              </Badge>
+            </h1>
 
-            <p className="text-3xl mb-3">${(invoice.value / 100).toFixed(2)}</p>
-
-            <p className="text-lg mb-8">{invoice.description}</p>
+            <p className="text-4xl font-bold mb-2">${(invoice.value / 100).toFixed(2)}</p>
+            <p className="text-muted-foreground text-lg">{invoice.description}</p>
           </div>
+
           <div>
-            <h2 className="text-xl font-bold mb-4">Manage Invoice</h2>
-            {invoice.status === "open" && (
+            <h2 className="text-xl font-semibold mb-4">Manage Invoice</h2>
+            {invoice.status === "open" ? (
               <form action={createPayment}>
                 <input type="hidden" name="id" value={invoice.id} />
-                <Button className="flex gap-2 font-bold bg-green-700">
-                  <CreditCard className="w-5 h-auto" />
+                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white gap-2">
+                  <CreditCard className="w-5 h-5" />
                   Pay Invoice
                 </Button>
               </form>
-            )}
-            {invoice.status === "paid" && (
-              <p className="flex gap-2 items-center text-xl font-bold">
-                <Check className="w-8 h-auto bg-green-500 rounded-full text-white p-1" />
+            ) : invoice.status === "paid" ? (
+              <div className="flex items-center gap-3 text-green-700 font-semibold text-lg">
+                <Check className="w-6 h-6 bg-green-200 rounded-full p-1" />
                 Invoice Paid
-              </p>
-            )}
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <h2 className="font-bold text-lg mb-4">Billing Details</h2>
-
-        <ul className="grid gap-2">
-          <li className="flex gap-4">
-            <strong className="block w-28 flex-shrink-0 font-medium text-sm">
-              Invoice ID
-            </strong>
-            <span>{invoice.id}</span>
-          </li>
-          <li className="flex gap-4">
-            <strong className="block w-28 flex-shrink-0 font-medium text-sm">
-              Invoice Date
-            </strong>
-            <span>{new Date(invoice.createTs).toLocaleDateString()}</span>
-          </li>
-          <li className="flex gap-4">
-            <strong className="block w-28 flex-shrink-0 font-medium text-sm">
-              Billing Name
-            </strong>
-            <span>{invoice.customer.name}</span>
-          </li>
-        </ul>
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Billing Details</h2>
+          <ul className="grid gap-3 text-sm text-foreground">
+            <Detail label="Invoice ID" value={invoice.id} />
+            <Detail
+              label="Invoice Date"
+              value={new Date(invoice.createTs).toLocaleDateString()}
+            />
+            <Detail label="Billing Name" value={invoice.name} />
+          </ul>
+        </section>
       </Container>
     </main>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string | number }) {
+  return (
+    <li className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+      <strong className="w-32 text-muted-foreground">{label}</strong>
+      <span>{value}</span>
+    </li>
+  );
+}
+
+function AlertMessage({ type, message }: { type: "error" | "warning"; message: string }) {
+  const bg = {
+    error: "bg-red-100 text-red-800",
+    warning: "bg-yellow-100 text-yellow-800",
+  };
+
+  return (
+    <p className={cn("text-sm text-center px-3 py-2 rounded-lg mb-6", bg[type])}>
+      {message}
+    </p>
   );
 }

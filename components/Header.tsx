@@ -8,34 +8,51 @@ import {
 import Container from "./Container";
 import Link from "next/link";
 import { ThemeToggler } from "./ThemeToggler";
-
 import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
 function Header() {
   return (
-    <header className="mt-5 mb-8">
+    <header className="w-full py-5 border-b border-border sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <Container>
-        <div className="flex justify-between items-center gap-4">
-          <div className="flex justify-between items-center gap-4">
-            <p className="font-bold">
-              <Link href="/dashboard">Invoicipedia</Link>
-            </p>
+        <div className="flex justify-between items-center gap-6">
+          {/* Logo + Nav */}
+          <div className="flex items-center gap-6">
+            <Link href="/" className="text-xl font-bold text-foreground hover:opacity-80 transition">
+              Invoicepedia
+            </Link>
 
             <SignedIn>
-              <span className="-ml-2">
-                <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
-              </span>
+              <OrganizationSwitcher
+                afterCreateOrganizationUrl="/dashboard"
+                appearance={{
+                  elements: {
+                    rootBox: "rounded-md border border-border px-2 py-1",
+                    organizationSwitcherTrigger: "text-sm font-medium text-muted-foreground",
+                  },
+                }}
+              />
             </SignedIn>
           </div>
-          <div className=" flex space-x-3 items-center">
+
+          {/* Actions */}
+          <div className="flex items-center gap-4">
             <ThemeToggler />
+
             <SignedOut>
-              <div className="bg-slate-200 cursor-pointer text-black hover:bg-zinc-900 hover:text-white hover:border-slate-200 py-1 px-4 rounded-4xl">
+              <Button asChild variant="outline" className="rounded-md text-sm font-semibold">
                 <SignInButton />
-              </div>
+              </Button>
             </SignedOut>
+
             <SignedIn>
-              <UserButton />
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8",
+                  },
+                }}
+              />
             </SignedIn>
           </div>
         </div>

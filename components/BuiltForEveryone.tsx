@@ -5,6 +5,8 @@ import React, { forwardRef, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { AnimatedBeam } from "@/components/magicui/animated-beam";
 import { DotPattern } from "./magicui/dot-pattern";
+import { Card } from "./ui/card";
+import TabCard from "./TabCard";
 
 const Circle = forwardRef<
   HTMLDivElement,
@@ -36,16 +38,11 @@ export default function BuiltForEveryone() {
   const div7Ref = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="flex items-center  justify-between w-[80%] ">
+    <div className="flex items-center min-h-screen justify-between w-[80%] ">
          
-         <span className="mt-10   text-center mb-10">
-            
-          <span className="text-2xl md:text-3xl lg:text-5xl font-bold flex flex-col space-y-6">
-            <p>CROSS</p> <p>PLATFORM</p> <p>INTEGRATION</p>
-          </span>
-        </span>
+        <TabCard/>
       <div
-        className="relative flex justify-center h-[300px]   items-center w-full overflow-hidden py-10"
+        className="relative flex justify-center h-[300px]   items-center w-full overflow-hidden pl-10 py-10"
         ref={containerRef}
       >
        
