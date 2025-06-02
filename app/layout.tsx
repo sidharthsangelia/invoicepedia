@@ -57,7 +57,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-          <Head>
+          <head>
           <title>Invoicepedia - AI Powered</title>
           <meta
             name="description"
@@ -90,7 +90,7 @@ export default function RootLayout({
             name="twitter:image"
             content="https://opengraph.b-cdn.net/production/images/87d73c74-dbda-4c00-bb08-0181fa8e6f5c.png?token=JE_M2UgTEsKK5DxDKZbfohxo-qBcunQmAzodZXZco0A&height=568&width=1200&expires=33284876157"
           />
-        </Head>
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen grid grid-rows-[auto_1fr_auto]`}
         >
