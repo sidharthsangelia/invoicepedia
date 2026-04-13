@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Customer {
+  id             Int       @id @default(autoincrement())
+  createTs       DateTime  @default(now())
+  name           String
+  email          String
+  userId         String
+  organizationId String?
+
+  invoices       Invoice[]
+
+  @@map("customers")
+}
+
+model Invoice {
+  id             Int       @id @default(autoincrement())
+  createTs       DateTime  @default(now())
+  value          Int
+  description    String
+  userId         String
+  organizationId String?
+  customerId     Int
+  status         Status
+
+  customer       Customer  @relation(fields: [customerId], references: [id])
+
+  @@map("invoices")
+}
+
+enum Status {
+  PAID
+  PENDING
+  OVERDUE
+}

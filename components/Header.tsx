@@ -28,7 +28,7 @@ function Header() {
                 appearance={{
                   elements: {
                     rootBox: "rounded-md border border-border px-2 py-1",
-                    organizationSwitcherTrigger: "text-sm font-medium text-muted-foreground",
+                    organizationSwitcherTrigger: "text-sm font-medium text-foreground",
                   },
                 }}
               />

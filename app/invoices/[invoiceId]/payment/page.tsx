@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { Check, CreditCard } from "lucide-react";
 import Stripe from "stripe";
 
@@ -8,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { createPayment, updateStatusAction } from "@/app/actions";
-import { Customers, Invoices } from "@/db/schema";
-import { db } from "@/db";
+import { prisma } from "@/db/prisma";
 import { notFound } from "next/navigation";
 
 const stripe = new Stripe(String(process.env.STRIPE_API_SECRET));
@@ -35,26 +33,26 @@ export default async function InvoicePage({ params, searchParams }: InvoicePageP
     if (session.payment_status === "paid") {
       const formData = new FormData();
       formData.append("id", invoiceId);
-      formData.append("status", "paid");
+      formData.append("status", "PAID");
       await updateStatusAction(formData);
     } else {
       isError = true;
     }
   }
 
-  const [invoice] = await db
-    .select({
-      id: Invoices.id,
-      status: Invoices.status,
-      createTs: Invoices.createTs,
-      description: Invoices.description,
-      value: Invoices.value,
-      name: Customers.name,
-    })
-    .from(Invoices)
-    .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
-    .where(eq(Invoices.id, id))
-    .limit(1);
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      createTs: true,
+      description: true,
+      value: true,
+      customer: {
+        select: { name: true },
+      },
+    },
+  });
 
   if (!invoice) notFound();
 
@@ -75,10 +73,9 @@ export default async function InvoicePage({ params, searchParams }: InvoicePageP
               <Badge
                 className={cn(
                   "capitalize px-3 py-1 text-white text-sm rounded-full",
-                  invoice.status === "open" && "bg-blue-500",
-                  invoice.status === "paid" && "bg-green-600",
-                  invoice.status === "void" && "bg-zinc-700",
-                  invoice.status === "uncollectible" && "bg-red-600"
+                  invoice.status === "PENDING" && "bg-blue-500",
+                  invoice.status === "PAID" && "bg-green-600",
+                  invoice.status === "OVERDUE" && "bg-red-600"
                 )}
               >
                 {invoice.status}
@@ -91,7 +88,7 @@ export default async function InvoicePage({ params, searchParams }: InvoicePageP
 
           <div>
             <h2 className="text-xl font-semibold mb-4">Manage Invoice</h2>
-            {invoice.status === "open" ? (
+            {invoice.status === "PENDING" ? (
               <form action={createPayment}>
                 <input type="hidden" name="id" value={invoice.id} />
                 <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white gap-2">
@@ -99,7 +96,7 @@ export default async function InvoicePage({ params, searchParams }: InvoicePageP
                   Pay Invoice
                 </Button>
               </form>
-            ) : invoice.status === "paid" ? (
+            ) : invoice.status === "PAID" ? (
               <div className="flex items-center gap-3 text-green-700 font-semibold text-lg">
                 <Check className="w-6 h-6 bg-green-200 rounded-full p-1" />
                 Invoice Paid
@@ -116,7 +113,7 @@ export default async function InvoicePage({ params, searchParams }: InvoicePageP
               label="Invoice Date"
               value={new Date(invoice.createTs).toLocaleDateString()}
             />
-            <Detail label="Billing Name" value={invoice.name} />
+            <Detail label="Billing Name" value={invoice.customer.name} />
           </ul>
         </section>
       </Container>

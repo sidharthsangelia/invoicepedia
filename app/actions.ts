@@ -1,16 +1,15 @@
 "use server";
 
-import { db } from "@/db";
-import { Customers, Invoices, Status } from "@/db/schema";
+import { prisma } from "@/db/prisma";
+import { Status } from "@/generated/prisma/enums";
+ 
 import { auth } from "@clerk/nextjs/server";
-import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
 const stripe = new Stripe(String(process.env.STRIPE_API_SECRET));
-
 
 export async function createAction(formData: FormData) {
   const { userId, orgId } = await auth();
@@ -23,69 +22,67 @@ export async function createAction(formData: FormData) {
   const description = formData.get("description") as string;
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
-  const [customer] = await db
-  .insert(Customers)
-  .values({
-    name,
-    email,
-    userId,
-    organizationId: orgId || null 
-   })
-  .returning({
-    id: Customers.id,
+
+  const customer = await prisma.customer.create({
+    data: {
+      name,
+      email,
+      userId,
+      organizationId: orgId || null,
+    },
+    select: {
+      id: true,
+    },
   });
- 
-  const results = await db
-    .insert(Invoices)
-    .values({
+
+  const invoice = await prisma.invoice.create({
+    data: {
       value,
       description,
       userId,
       customerId: customer.id,
-      status: "open",
-      organizationId: orgId || null
-    })
-    .returning({
-      id: Invoices.id,
-    });
+      status: Status.PENDING, // Default new invoices to PENDING
+      organizationId: orgId || null,
+    },
+    select: {
+      id: true,
+    },
+  });
 
-  redirect(`/invoices/${results[0].id}`);
+  redirect(`/invoices/${invoice.id}`);
 }
 
 export async function updateStatusAction(formData: FormData) {
   const { userId, orgId } = await auth();
 
-  // // Updating disabled for demo
-  // if ( userId !== process.env.ME_ID ) return;
-
   if (!userId) {
     return;
   }
 
-  const id = formData.get("id") as string;
+  const id = Number(formData.get("id"));
   const status = formData.get("status") as Status;
 
   if (orgId) {
-    await db
-      .update(Invoices)
-      .set({ status })
-      .where(
-        and(
-          eq(Invoices.id, Number.parseInt(id)),
-          eq(Invoices.organizationId, orgId),
-        ),
-      );
+    await prisma.invoice.updateMany({
+      where: {
+        id,
+        organizationId: orgId,
+      },
+      data: {
+        status,
+      },
+    });
   } else {
-    await db
-      .update(Invoices)
-      .set({ status })
-      .where(
-        and(
-          eq(Invoices.id, Number.parseInt(id)),
-          eq(Invoices.userId, userId),
-          isNull(Invoices.organizationId),
-        ),
-      );
+    await prisma.invoice.updateMany({
+      where: {
+        id,
+        userId,
+        organizationId: null,
+      },
+      data: {
+        status,
+      },
+    });
   }
 
   revalidatePath(`/invoices/${id}`, "page");
@@ -94,55 +91,49 @@ export async function updateStatusAction(formData: FormData) {
 export async function deleteInvoiceAction(formData: FormData) {
   const { userId, orgId } = await auth();
 
-  // // Deleting disabled for demo
-  // if ( userId !== process.env.ME_ID ) return;
-
   if (!userId) {
     return;
   }
 
-  const id = formData.get("id") as string;
+  const id = Number(formData.get("id"));
 
   if (orgId) {
-    await db
-      .delete(Invoices)
-      .where(
-        and(
-          eq(Invoices.id, Number.parseInt(id)),
-          eq(Invoices.organizationId, orgId),
-        ),
-      );
+    await prisma.invoice.deleteMany({
+      where: {
+        id,
+        organizationId: orgId,
+      },
+    });
   } else {
-    await db
-      .delete(Invoices)
-      .where(
-        and(
-          eq(Invoices.id, Number.parseInt(id)),
-          eq(Invoices.userId, userId),
-          isNull(Invoices.organizationId),
-        ),
-      );
+    await prisma.invoice.deleteMany({
+      where: {
+        id,
+        userId,
+        organizationId: null,
+      },
+    });
   }
 
   redirect("/dashboard");
 }
 
-
-
 export async function createPayment(formData: FormData) {
-
   const headersList = await headers();
   const origin = headersList.get("origin");
-  const id = Number.parseInt(formData.get("id") as string);
 
-  const [result] = await db
-    .select({
-      status: Invoices.status,
-      value: Invoices.value,
-    })
-    .from(Invoices)
-    .where(eq(Invoices.id, id))
-    .limit(1);
+  const id = Number(formData.get("id"));
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    select: {
+      status: true,
+      value: true,
+    },
+  });
+
+  if (!invoice) {
+    throw new Error("Invoice not found");
+  }
 
   const session = await stripe.checkout.sessions.create({
     line_items: [
@@ -150,7 +141,7 @@ export async function createPayment(formData: FormData) {
         price_data: {
           currency: "usd",
           product: "prod_SEljwTBkWRQXjo",
-          unit_amount: result.value,
+          unit_amount: invoice.value,
         },
         quantity: 1,
       },

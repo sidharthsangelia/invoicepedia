@@ -23,14 +23,14 @@ export default function Home() {
     <main className="h-full ">
       <Container className="">
 
-      <div className="flex justify-between mb-6">
+      <div className="flex justify-between my-6">
         <h1 className="text-3xl font-semibold">Create Invoice</h1>
       </div>
 
       <Form
         action={createAction}
         onSubmit={handleOnSubmit}
-        className="grid gap-4 max-w-xl"
+        className="grid gap-4 max-w-xl my-8"
         >
         <div>
           <Label htmlFor="name" className="block font-semibold text-sm mb-2 ">

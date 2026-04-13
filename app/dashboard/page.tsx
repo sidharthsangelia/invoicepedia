@@ -12,37 +12,37 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CirclePlus } from "lucide-react";
-import { db } from "@/db";
-import { Customers, Invoices } from "@/db/schema";
+import { prisma } from "@/db/prisma";
 import { cn } from "@/lib/utils";
 import Container from "@/components/Container";
 import { auth } from "@clerk/nextjs/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { PricingTable, Protect } from "@clerk/nextjs";
+
 
 export default async function DashboardPage() {
-  const { userId, orgId } = await auth();
+  const { userId, orgId, has } = await auth();
   if (!userId) return;
 
-  let results;
-  if (orgId) {
-    results = await db
-      .select()
-      .from(Invoices)
-      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
-      .where(eq(Invoices.organizationId, orgId));
-  } else {
-    results = await db
-      .select()
-      .from(Invoices)
-      .innerJoin(Customers, eq(Invoices.customerId, Customers.id))
-      .where(and(eq(Invoices.userId, userId), isNull(Invoices.organizationId)));
-  }
+  const hasSilverPlan = has({ plan: "silver" });
 
-  const invoices =
-    results?.map(({ invoices, customers }) => ({
-      ...invoices,
-      customer: customers,
-    })) || [];
+  if (!hasSilverPlan)
+    return (
+      <div>
+        <p>Only subscribers to the Basic plan can access this content.</p>
+        <Link href="/pricing">
+          <Button>Subscribe Now!</Button>
+        </Link>
+      </div>
+    );
+
+  const invoices = await prisma.invoice.findMany({
+    where: orgId
+      ? { organizationId: orgId }
+      : { userId, organizationId: null },
+    include: {
+      customer: true,
+    },
+  });
 
   return (
     <main className="min-h-[80vh] pb-16 pt-8">
@@ -74,47 +74,49 @@ export default async function DashboardPage() {
             <TableBody>
               {invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="p-6 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={5}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     No invoices found. Create one to get started!
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((result) => (
+                invoices.map((invoice) => (
                   <TableRow
-                    key={result.id}
+                    key={invoice.id}
                     className="hover:bg-muted/40 transition-colors"
                   >
                     <TableCell className="p-4 text-foreground font-medium">
-                      <Link href={`/invoices/${result.id}`}>
-                        {new Date(result.createTs).toLocaleDateString()}
+                      <Link href={`/invoices/${invoice.id}`}>
+                        {new Date(invoice.createTs).toLocaleDateString()}
                       </Link>
                     </TableCell>
                     <TableCell className="p-4">
-                      <Link href={`/invoices/${result.id}`}>
-                        {result.customer.name}
+                      <Link href={`/invoices/${invoice.id}`}>
+                        {invoice.customer.name}
                       </Link>
                     </TableCell>
                     <TableCell className="p-4 text-muted-foreground">
-                      <Link href={`/invoices/${result.id}`}>
-                        {result.customer.email}
+                      <Link href={`/invoices/${invoice.id}`}>
+                        {invoice.customer.email}
                       </Link>
                     </TableCell>
                     <TableCell className="p-4 text-center">
                       <Badge
                         className={cn(
                           "capitalize px-3 py-1 rounded-full text-white text-xs",
-                          result.status === "open" && "bg-blue-500",
-                          result.status === "paid" && "bg-green-600",
-                          result.status === "void" && "bg-zinc-700",
-                          result.status === "uncollectable" && "bg-red-600"
+                          invoice.status === "PENDING" && "bg-blue-500",
+                          invoice.status === "PAID" && "bg-green-600",
+                          invoice.status === "OVERDUE" && "bg-red-600"
                         )}
                       >
-                        {result.status}
+                        {invoice.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="p-4 text-right font-medium">
-                      <Link href={`/invoices/${result.id}`}>
-                        ${(result.value / 100).toFixed(2)}
+                      <Link href={`/invoices/${invoice.id}`}>
+                        ${(invoice.value / 100).toFixed(2)}
                       </Link>
                     </TableCell>
                   </TableRow>
