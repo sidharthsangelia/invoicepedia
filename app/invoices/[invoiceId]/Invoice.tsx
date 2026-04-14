@@ -43,15 +43,15 @@ import {
   Phone,
   MapPin,
   User,
+  Pencil,
 } from "lucide-react";
 import { useOptimistic, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
- 
+
 import { InvoiceStatus } from "@/generated/prisma/enums";
 import { updateStatusAction } from "@/actions/updateInvoiceStatus";
 import { deleteInvoiceAction } from "@/actions/deleteInvoice";
- 
 
 // -----------------------------------------------------------------------
 // Types — mirror Prisma includes in page.tsx
@@ -107,19 +107,23 @@ const STATUS_CONFIG: Record<
 > = {
   DRAFT: {
     label: "Draft",
-    className: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-300/40",
+    className:
+      "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-300/40",
   },
   SENT: {
     label: "Sent",
-    className: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-300/40",
+    className:
+      "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-300/40",
   },
   VIEWED: {
     label: "Viewed",
-    className: "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-300/40",
+    className:
+      "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-300/40",
   },
   PAID: {
     label: "Paid",
-    className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-300/40",
+    className:
+      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-300/40",
   },
   OVERDUE: {
     label: "Overdue",
@@ -127,12 +131,13 @@ const STATUS_CONFIG: Record<
   },
   CANCELLED: {
     label: "Cancelled",
-    className: "bg-zinc-500/15 text-zinc-500 dark:text-zinc-500 border-zinc-300/40 line-through",
+    className:
+      "bg-zinc-500/15 text-zinc-500 dark:text-zinc-500 border-zinc-300/40 line-through",
   },
 };
 
 const AVAILABLE_STATUSES = Object.entries(STATUS_CONFIG).map(
-  ([value, { label }]) => ({ value: value as InvoiceStatus, label })
+  ([value, { label }]) => ({ value: value as InvoiceStatus, label }),
 );
 
 // -----------------------------------------------------------------------
@@ -176,7 +181,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
   const [currentStatus, setCurrentStatus] = useOptimistic(
     invoice.status,
-    (_state, next: InvoiceStatus) => next
+    (_state, next: InvoiceStatus) => next,
   );
 
   async function handleStatusUpdate(formData: FormData) {
@@ -192,7 +197,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
   const total = invoice.lineItems.reduce(
     (sum, item) => sum + item.quantity * item.unitAmount,
-    0
+    0,
   );
 
   const statusCfg = STATUS_CONFIG[currentStatus] ?? STATUS_CONFIG.DRAFT;
@@ -200,7 +205,6 @@ export default function Invoice({ invoice }: InvoiceProps) {
   return (
     <main className="min-h-screen py-8">
       <Container>
-
         {/* ── Back ── */}
         <Link
           href="/dashboard"
@@ -221,25 +225,38 @@ export default function Invoice({ invoice }: InvoiceProps) {
               </h1>
               <Badge
                 variant="outline"
-                className={cn("px-2.5 py-0.5 text-xs font-medium rounded-full", statusCfg.className)}
+                className={cn(
+                  "px-2.5 py-0.5 text-xs font-medium rounded-full",
+                  statusCfg.className,
+                )}
               >
                 {statusCfg.label}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Created {formatDate(invoice.createdAt)}
-              {invoice.dueDate && (
-                <> · Due {formatDate(invoice.dueDate)}</>
-              )}
+              {invoice.dueDate && <> · Due {formatDate(invoice.dueDate)}</>}
             </p>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
             {/* Change status */}
+            {currentStatus === InvoiceStatus.DRAFT && (
+              <Button asChild variant="default" size="sm" className="gap-1.5">
+                <Link href={`/invoices/${invoice.id}/edit`}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit Invoice
+                </Link>
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 cursor-pointer"
+                >
                   Change Status
                   <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
@@ -258,7 +275,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
                         type="submit"
                         className={cn(
                           "w-full text-left flex items-center gap-2",
-                          currentStatus === value && "font-medium"
+                          currentStatus === value && "font-medium",
                         )}
                       >
                         <span
@@ -327,7 +344,11 @@ export default function Invoice({ invoice }: InvoiceProps) {
                   </Button>
                   <form action={deleteInvoiceAction}>
                     <input type="hidden" name="id" value={invoice.id} />
-                    <Button variant="destructive" type="submit" className="gap-2">
+                    <Button
+                      variant="destructive"
+                      type="submit"
+                      className="gap-2"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete Invoice
                     </Button>
@@ -340,10 +361,8 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
         {/* ── Body grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           {/* Left: Line items + Notes */}
           <div className="lg:col-span-2 space-y-6">
-
             {/* Line Items */}
             <div className="rounded-xl border border-border overflow-hidden">
               <div className="px-5 py-4 border-b border-border bg-muted/30">
@@ -352,10 +371,18 @@ export default function Invoice({ invoice }: InvoiceProps) {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">Description</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground text-right w-20">Qty</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground text-right w-32">Unit Price</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground text-right w-32">Amount</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Description
+                    </TableHead>
+                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground text-right w-20">
+                      Qty
+                    </TableHead>
+                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground text-right w-32">
+                      Unit Price
+                    </TableHead>
+                    <TableHead className="text-xs uppercase tracking-wide text-muted-foreground text-right w-32">
+                      Amount
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -371,13 +398,20 @@ export default function Invoice({ invoice }: InvoiceProps) {
                   ) : (
                     invoice.lineItems.map((item) => (
                       <TableRow key={item.id} className="hover:bg-muted/30">
-                        <TableCell className="text-sm">{item.description}</TableCell>
-                        <TableCell className="text-sm text-right tabular-nums">{item.quantity}</TableCell>
+                        <TableCell className="text-sm">
+                          {item.description}
+                        </TableCell>
+                        <TableCell className="text-sm text-right tabular-nums">
+                          {item.quantity}
+                        </TableCell>
                         <TableCell className="text-sm text-right tabular-nums">
                           {formatMoney(item.unitAmount, invoice.currency)}
                         </TableCell>
                         <TableCell className="text-sm text-right tabular-nums font-medium">
-                          {formatMoney(item.quantity * item.unitAmount, invoice.currency)}
+                          {formatMoney(
+                            item.quantity * item.unitAmount,
+                            invoice.currency,
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -385,7 +419,10 @@ export default function Invoice({ invoice }: InvoiceProps) {
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-sm font-semibold text-right">
+                    <TableCell
+                      colSpan={3}
+                      className="text-sm font-semibold text-right"
+                    >
                       Total
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums text-base">
@@ -416,7 +453,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
                     .sort(
                       (a, b) =>
                         new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime()
+                        new Date(a.createdAt).getTime(),
                     )
                     .map((activity) => (
                       <li key={activity.id} className="ml-4">
@@ -441,18 +478,30 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
           {/* Right: Customer + Invoice meta */}
           <div className="space-y-4">
-
             {/* Customer */}
             <div className="rounded-xl border border-border p-5 space-y-4">
               <h2 className="text-sm font-semibold">Customer</h2>
               <div className="space-y-2.5">
-                <DetailRow icon={<User className="h-3.5 w-3.5" />} value={invoice.customer.name} />
-                <DetailRow icon={<Mail className="h-3.5 w-3.5" />} value={invoice.customer.email} href={`mailto:${invoice.customer.email}`} />
+                <DetailRow
+                  icon={<User className="h-3.5 w-3.5" />}
+                  value={invoice.customer.name}
+                />
+                <DetailRow
+                  icon={<Mail className="h-3.5 w-3.5" />}
+                  value={invoice.customer.email}
+                  href={`mailto:${invoice.customer.email}`}
+                />
                 {invoice.customer.phone && (
-                  <DetailRow icon={<Phone className="h-3.5 w-3.5" />} value={invoice.customer.phone} />
+                  <DetailRow
+                    icon={<Phone className="h-3.5 w-3.5" />}
+                    value={invoice.customer.phone}
+                  />
                 )}
                 {invoice.customer.address && (
-                  <DetailRow icon={<MapPin className="h-3.5 w-3.5" />} value={invoice.customer.address} />
+                  <DetailRow
+                    icon={<MapPin className="h-3.5 w-3.5" />}
+                    value={invoice.customer.address}
+                  />
                 )}
               </div>
             </div>
@@ -469,10 +518,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
                   <MetaRow label="Number" value={invoice.invoiceNumber} />
                 )}
                 <MetaRow label="Currency" value={invoice.currency} />
-                <MetaRow
-                  label="Issued"
-                  value={formatDate(invoice.createdAt)}
-                />
+                <MetaRow label="Issued" value={formatDate(invoice.createdAt)} />
                 {invoice.dueDate && (
                   <MetaRow
                     label="Due Date"
@@ -487,10 +533,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
                   />
                 )}
                 <Separator />
-                <MetaRow
-                  label="Status"
-                  value={statusCfg.label}
-                />
+                <MetaRow label="Status" value={statusCfg.label} />
               </dl>
             </div>
           </div>
