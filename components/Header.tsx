@@ -18,7 +18,10 @@ function Header() {
         <div className="flex justify-between items-center gap-6">
           {/* Logo + Nav */}
           <div className="flex items-center gap-6">
-            <Link href="/" className="text-xl font-bold text-foreground hover:opacity-80 transition">
+            <Link
+              href="/"
+              className="text-xl font-bold text-foreground hover:opacity-80 transition"
+            >
               Invoicepedia
             </Link>
 
@@ -26,9 +29,27 @@ function Header() {
               <OrganizationSwitcher
                 afterCreateOrganizationUrl="/dashboard"
                 appearance={{
+                  variables: {
+                    colorText: "hsl(var(--foreground))",
+                    colorTextSecondary: "hsl(var(--muted-foreground))",
+                    colorBackground: "hsl(var(--background))",
+                    colorInputBackground: "hsl(var(--background))",
+                    colorNeutral: "hsl(var(--muted))",
+                  },
                   elements: {
-                    rootBox: "rounded-md border border-border px-2 py-1",
-                    organizationSwitcherTrigger: "text-sm font-medium text-foreground",
+                    rootBox:
+                      "rounded-md border border-border bg-background hover:bg-muted transition px-3  py-1.5 shadow-sm",
+
+                    /* 👇 THIS fixes modal */
+                    modalContent:
+                      "bg-card text-foreground border border-border shadow-lg rounded-lg p-6 w-full max-w-md",
+
+                    modalBackdrop:
+                      "bg-black/50 backdrop-blur-sm fixed inset-0 z-40",
+
+                    /* dropdown (also important) */
+                    organizationSwitcherPopoverCard:
+                      "bg-card text-foreground border border-border shadow-md rounded-md p-2 w-48",
                   },
                 }}
               />
@@ -40,7 +61,11 @@ function Header() {
             <ThemeToggler />
 
             <SignedOut>
-              <Button asChild variant="outline" className="rounded-md text-sm font-semibold">
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-md text-sm font-semibold"
+              >
                 <SignInButton />
               </Button>
             </SignedOut>

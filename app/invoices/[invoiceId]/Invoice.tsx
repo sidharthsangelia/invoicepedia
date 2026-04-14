@@ -49,7 +49,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
  
 import { InvoiceStatus } from "@/generated/prisma/enums";
-import { deleteInvoiceAction, updateStatusAction } from "@/app/actions";
+import { updateStatusAction } from "@/actions/updateInvoiceStatus";
+import { deleteInvoiceAction } from "@/actions/deleteInvoice";
+ 
 
 // -----------------------------------------------------------------------
 // Types — mirror Prisma includes in page.tsx
@@ -201,7 +203,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
         {/* ── Back ── */}
         <Link
-          href="/invoices"
+          href="/dashboard"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

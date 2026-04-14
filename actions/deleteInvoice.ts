@@ -1,26 +1,29 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { ActionResult } from "./updateInvoice";
-import { prisma } from "@/db/prisma";
 import { redirect } from "next/navigation";
+import { prisma } from "@/db/prisma";
 
-export async function deleteInvoiceAction(
-  formData: FormData
-): Promise<ActionResult> {
-  const { userId } = await auth();
-  if (!userId) return { success: false, error: "UNAUTHENTICATED" };
+export async function deleteInvoiceAction(formData: FormData): Promise<void> {
+  const { userId, orgId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-  const invoiceId = formData.get("id") as string;
-  if (!invoiceId) return { success: false, error: "Invoice ID is required" };
+  const invoiceId = (formData.get("id") as string | null)?.trim();
+  if (!invoiceId) throw new Error("Invoice ID is required");
 
-  // Confirm ownership
+  // Confirm ownership before mutating
   const invoice = await prisma.invoice.findFirst({
-    where: { id: invoiceId, userId, deletedAt: null },
+    where: {
+      id: invoiceId,
+      deletedAt: null,
+      ...(orgId
+        ? { organizationId: orgId }
+        : { userId, organizationId: null }),
+    },
     select: { id: true },
   });
 
-  if (!invoice) return { success: false, error: "Invoice not found" };
+  if (!invoice) throw new Error("Invoice not found");
 
   // Soft-delete — preserves payment/activity history
   await prisma.invoice.update({
@@ -28,5 +31,5 @@ export async function deleteInvoiceAction(
     data: { deletedAt: new Date() },
   });
 
-  redirect("/invoices");
+  redirect("/dashboard");
 }
