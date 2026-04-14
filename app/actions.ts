@@ -2,8 +2,8 @@
 
 import { prisma } from "@/db/prisma";
 import { Status } from "@/generated/prisma/enums";
- 
-import { auth } from "@clerk/nextjs/server";
+
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -11,12 +11,35 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(String(process.env.STRIPE_API_SECRET));
 
-export async function createAction(formData: FormData) {
-  const { userId, orgId } = await auth();
+ 
 
+export async function createInvoiceAction(formData: FormData) {
+    const { userId, orgId } = await auth();
+
+  // If not signed in, redirect to sign-in and come back after
   if (!userId) {
-    return;
+    redirect("/sign-in?redirect_url=/invoices/new");
   }
+
+  // Upsert user on the way in — this is the guaranteed sync point
+  const client = await clerkClient();
+  const clerkUser = await client.users.getUser(userId);
+
+  await prisma.user.upsert({
+    where: { clerkId: userId },
+    update: {
+      email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
+      name: `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || null,
+      imageUrl: clerkUser.imageUrl ?? null,
+    },
+    create: {
+      clerkId: userId,
+      email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
+      name: `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || null,
+      imageUrl: clerkUser.imageUrl ?? null,
+    },
+  });
+
 
   const value = Math.floor(parseFloat(String(formData.get("value")))) * 100;
   const description = formData.get("description") as string;

@@ -9,31 +9,55 @@ type InvoicePageProps = {
 
 export default async function InvoicePage({ params }: InvoicePageProps) {
   const { userId, orgId } = await auth();
-  if (!userId) return;
+  if (!userId) return null;
 
-  const resolvedParams = await params;
-  const invoiceId = parseInt(resolvedParams.invoiceId);
-  if (isNaN(invoiceId)) {
-    throw new Error("Invalid Invoice Id");
+  const { invoiceId } = await params;
+
+  // IDs are now cuid strings — no parseInt needed
+  if (!invoiceId || invoiceId.length < 1) {
+    throw new Error("Invalid Invoice ID");
   }
 
-  const result = await prisma.invoice.findFirst({
-    where: orgId
-      ? { id: invoiceId, organizationId: orgId }
-      : { id: invoiceId, userId, organizationId: null },
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      id: invoiceId,
+      deletedAt: null,
+      ...(orgId
+        ? { organizationId: orgId }
+        : { userId, organizationId: null }),
+    },
     include: {
-      customer: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+        },
+      },
+      lineItems: {
+        select: {
+          id: true,
+          description: true,
+          quantity: true,
+          unitAmount: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      activities: {
+        select: {
+          id: true,
+          createdAt: true,
+          type: true,
+          note: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
-  if (!result) {
-    notFound();
-  }
-
-  const invoice = {
-    ...result,
-    customer: result.customer,
-  };
+  if (!invoice) notFound();
 
   return <Invoice invoice={invoice} />;
 }

@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -12,37 +7,152 @@ datasource db {
   provider = "postgresql"
 }
 
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  OVERDUE
+  CANCELLED
+
+  @@map("invoice_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+
+  @@map("payment_status")
+}
+
+enum ActivityType {
+  CREATED
+  SENT
+  VIEWED
+  PAID
+  OVERDUE
+  CANCELLED
+  NOTE_ADDED
+  PAYMENT_FAILED
+
+  @@map("activity_type")
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique // Clerk's userId
+  email     String   @unique
+  name      String?
+  imageUrl  String? // Clerk profile picture
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customers Customer[]
+  invoices  Invoice[]
+
+  @@map("users")
+}
 
 model Customer {
-  id             Int       @id @default(autoincrement())
-  createTs       DateTime  @default(now())
+  id             String    @id @default(cuid())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   name           String
   email          String
+  phone          String?
+  address        String?
   userId         String
   organizationId String?
+  deletedAt      DateTime?
 
-  invoices       Invoice[]
+  user     User      @relation(fields: [userId], references: [clerkId]) // 👈 add this
+  invoices Invoice[]
 
+  @@unique([email, userId])
+  @@index([userId])
+  @@index([organizationId])
   @@map("customers")
 }
 
 model Invoice {
-  id             Int       @id @default(autoincrement())
-  createTs       DateTime  @default(now())
-  value          Int
-  description    String
+  id             String        @id @default(cuid())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  dueDate        DateTime?
+  invoiceNumber  String?
+  currency       String        @default("USD")
+  notes          String?
   userId         String
   organizationId String?
-  customerId     Int
-  status         Status
+  customerId     String
+  status         InvoiceStatus @default(DRAFT)
+  deletedAt      DateTime?
 
-  customer       Customer  @relation(fields: [customerId], references: [id])
+  user       User       @relation(fields: [userId], references: [clerkId]) // 👈 add this
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  lineItems  LineItem[]
+  payments   Payment[]
+  activities Activity[]
 
+  @@index([userId])
+  @@index([organizationId])
+  @@index([customerId])
+  @@index([status])
   @@map("invoices")
 }
 
-enum Status {
-  PAID
-  PENDING
-  OVERDUE
+model LineItem {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  description String
+  quantity    Int      @default(1)
+  unitAmount  Int // in cents
+  invoiceId   String
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("line_items")
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  createdAt             DateTime      @default(now())
+  invoiceId             String
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?       @unique
+  amount                Int // in cents
+  currency              String        @default("USD")
+  status                PaymentStatus @default(PENDING)
+  failureReason         String?
+  paidAt                DateTime?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  invoiceId String
+  userId    String // who triggered this action
+  type      ActivityType
+  note      String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("activities")
 }
