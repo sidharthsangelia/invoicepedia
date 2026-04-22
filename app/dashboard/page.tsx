@@ -110,11 +110,11 @@ export default async function DashboardPage() {
     )
     .reduce((sum, inv) => sum + computeTotal(inv.lineItems), 0);
 
-  const outstanding = allInvoices
-    .filter((inv) =>
-      [InvoiceStatus.SENT, InvoiceStatus.VIEWED].includes(inv.status)
-    )
-    .reduce((sum, inv) => sum + computeTotal(inv.lineItems), 0);
+const outstanding = allInvoices
+  .filter((inv) =>
+    ([InvoiceStatus.SENT, InvoiceStatus.VIEWED] as InvoiceStatus[]).includes(inv.status)
+  )
+  .reduce((sum, inv) => sum + computeTotal(inv.lineItems), 0);
 
   const overdueCount = allInvoices.filter(
     (inv) => inv.status === InvoiceStatus.OVERDUE
