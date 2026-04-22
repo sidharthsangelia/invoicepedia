@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Cover } from "./ui/cover";
-import { ShinyButton } from "./magicui/shiny-button";
+ 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
