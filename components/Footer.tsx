@@ -63,7 +63,7 @@ export default function Footer() {
 
       {/* Bottom bar */}
       <div
-        className="border-t py-6 text-center text-sm flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto px-6"
+        className="  py-6 text-center text-sm flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto px-6"
         style={{
           borderColor: "var(--color-border)",
           color: "var(--color-muted-foreground)",
@@ -76,14 +76,14 @@ export default function Footer() {
 
         <div className="flex items-center space-x-6">
           <p className="mr-4 whitespace-nowrap">
-            Made by <Link className="hover:text-[#F5991B]" href="https://sidharth-sangelia.vercel.app/">Sidharth</Link>{" "}
-            <span role="img" aria-label="sparkles">
+            Made by <Link className="hover:text-[#F5991B]" href="https://thesidharth.com/">Sidharth</Link>{" "}
+            {/* <span role="img" aria-label="sparkles">
               ✨
-            </span>{" "}
-            <span role="img" aria-label="robot">
+            </span>{" "} */}
+            {/* <span role="img" aria-label="robot">
               🤖
-            </span>{" "}
-            with Next.js, Xata & Clerk
+            </span>{" "} */}
+            {/* with Next.js, NeonDb & Clerk */}
           </p>
 
           {/* Social Icons */}

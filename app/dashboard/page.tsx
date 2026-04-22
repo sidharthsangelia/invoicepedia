@@ -3,14 +3,13 @@ import Link from "next/link";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CirclePlus, FileText } from "lucide-react";
+import { CirclePlus, FileText, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import { prisma } from "@/db/prisma";
 import { cn } from "@/lib/utils";
 import Container from "@/components/Container";
@@ -27,11 +26,22 @@ function computeTotal(lineItems: { quantity: number; unitAmount: number }[]): nu
   return lineItems.reduce((sum, item) => sum + item.quantity * item.unitAmount, 0);
 }
 
-/** Map each status to a deterministic Tailwind bg class. DRAFT uses muted styling. */
+/** Format currency without trailing zeros where possible */
+function formatCurrency(amountInCents: number, currency: string): string {
+  const amount = amountInCents / 100;
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: currency ?? "USD",
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/** Map each status to a deterministic Tailwind bg class. */
 function statusBadgeClass(status: InvoiceStatus): string {
   switch (status) {
     case InvoiceStatus.DRAFT:
-      return "bg-muted text-muted-foreground border border-border";
+      return "bg-zinc-800 text-zinc-300 border border-zinc-700";
     case InvoiceStatus.SENT:
       return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
     case InvoiceStatus.VIEWED:
@@ -54,43 +64,72 @@ function statusBadgeClass(status: InvoiceStatus): string {
 export default async function DashboardPage() {
   const { userId, orgId, has } = await auth();
 
-  // Unauthenticated — redirect rather than silently returning null
   if (!userId) {
     redirect("/sign-in");
   }
 
-  // Plan gate — redirect to pricing instead of rendering a dead end
   const hasSilverPlan = has({ plan: "silver" });
   if (!hasSilverPlan) {
     redirect("/pricing");
   }
 
-  // Fetch invoices with line items so we can compute totals
-  const invoices = await prisma.invoice.findMany({
-    where: {
-      deletedAt: null,
-      ...(orgId
-        ? { organizationId: orgId }
-        : { userId, organizationId: null }),
-    },
-    include: {
-      customer: {
-        select: { id: true, name: true, email: true },
+  const whereClause = {
+    deletedAt: null,
+    ...(orgId
+      ? { organizationId: orgId }
+      : { userId, organizationId: null }),
+  };
+
+  // Fetch invoices + compute metrics in parallel
+  const [invoices, allInvoices] = await Promise.all([
+    prisma.invoice.findMany({
+      where: whereClause,
+      include: {
+        customer: { select: { id: true, name: true, email: true } },
+        lineItems: { select: { quantity: true, unitAmount: true } },
       },
-      lineItems: {
-        select: { quantity: true, unitAmount: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.invoice.findMany({
+      where: whereClause,
+      include: {
+        lineItems: { select: { quantity: true, unitAmount: true } },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+    }),
+  ]);
+
+  // Metric calculations
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const paidThisMonth = allInvoices
+    .filter(
+      (inv) =>
+        inv.status === InvoiceStatus.PAID &&
+        new Date(inv.updatedAt) >= startOfMonth
+    )
+    .reduce((sum, inv) => sum + computeTotal(inv.lineItems), 0);
+
+  const outstanding = allInvoices
+    .filter((inv) =>
+      [InvoiceStatus.SENT, InvoiceStatus.VIEWED].includes(inv.status)
+    )
+    .reduce((sum, inv) => sum + computeTotal(inv.lineItems), 0);
+
+  const overdueCount = allInvoices.filter(
+    (inv) => inv.status === InvoiceStatus.OVERDUE
+  ).length;
 
   return (
     <main className="min-h-[80vh] pb-16 pt-8">
       <Container>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-semibold text-foreground">Invoices</h1>
-          <Button asChild className="inline-flex gap-2">
+          <Button
+            asChild
+            className="inline-flex gap-2 "
+          >
             <Link href="/invoices/new">
               <CirclePlus className="h-4 w-4" />
               Create Invoice
@@ -98,18 +137,57 @@ export default async function DashboardPage() {
           </Button>
         </div>
 
+        {/* Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          {/* Paid This Month */}
+          <div className="rounded-lg border border-border bg-card p-5 flex items-start justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Paid this month</p>
+              <p className="text-2xl font-semibold text-foreground tabular-nums">
+                {formatCurrency(paidThisMonth, "USD")}
+              </p>
+            </div>
+            <div className="rounded-md bg-green-900/30 p-2">
+              <TrendingUp className="h-4 w-4 text-green-400" />
+            </div>
+          </div>
+
+          {/* Outstanding */}
+          <div className="rounded-lg border border-border bg-card p-5 flex items-start justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Outstanding</p>
+              <p className="text-2xl font-semibold text-foreground tabular-nums">
+                {formatCurrency(outstanding, "USD")}
+              </p>
+            </div>
+            <div className="rounded-md bg-blue-900/30 p-2">
+              <Clock className="h-4 w-4 text-blue-400" />
+            </div>
+          </div>
+
+          {/* Overdue */}
+          <div className="rounded-lg border border-border bg-card p-5 flex items-start justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Overdue</p>
+              <p className="text-2xl font-semibold text-foreground tabular-nums">
+                {overdueCount} {overdueCount === 1 ? "invoice" : "invoices"}
+              </p>
+            </div>
+            <div className="rounded-md bg-red-900/30 p-2">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+            </div>
+          </div>
+        </div>
+
         {/* Table card */}
         <div className="rounded-lg border border-border bg-card shadow-sm">
           <Table>
-            <TableCaption className="text-muted-foreground pb-4">
-              A list of your recent invoices
-            </TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead className="p-4 w-[130px]">Date</TableHead>
                 <TableHead className="p-4">Invoice #</TableHead>
                 <TableHead className="p-4">Customer</TableHead>
-                <TableHead className="p-4 hidden sm:table-cell">Email</TableHead>
+                <TableHead className="p-4 hidden sm:table-cell">Due Date</TableHead>
                 <TableHead className="p-4 text-center">Status</TableHead>
                 <TableHead className="p-4 text-right">Amount</TableHead>
               </TableRow>
@@ -135,6 +213,13 @@ export default async function DashboardPage() {
                     undefined,
                     { year: "numeric", month: "short", day: "numeric" }
                   );
+                  const formattedDueDate = invoice.dueDate
+                    ? new Date(invoice.dueDate).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "—";
 
                   return (
                     <TableRow
@@ -159,7 +244,7 @@ export default async function DashboardPage() {
 
                       <TableCell className="p-4 text-muted-foreground hidden sm:table-cell">
                         <Link href={`/invoices/${invoice.id}`}>
-                          {invoice.customer.email}
+                          {formattedDueDate}
                         </Link>
                       </TableCell>
 
@@ -176,10 +261,7 @@ export default async function DashboardPage() {
 
                       <TableCell className="p-4 text-right font-medium tabular-nums">
                         <Link href={`/invoices/${invoice.id}`}>
-                          {new Intl.NumberFormat(undefined, {
-                            style: "currency",
-                            currency: invoice.currency ?? "USD",
-                          }).format(total / 100)}
+                          {formatCurrency(total, invoice.currency ?? "USD")}
                         </Link>
                       </TableCell>
                     </TableRow>
