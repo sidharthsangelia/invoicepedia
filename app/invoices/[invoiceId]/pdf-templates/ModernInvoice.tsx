@@ -6,547 +6,344 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-// /import {
-//   Table,
-//   TableHeader,
-//   TableBody,
-//   DataTableCell,
-//   TableCell,
-// } from "@ag-media/react-pdf-table";
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Palette — Agency: airy, confident, creative-studio feel ─────────────────
+const C = {
+  bg: "#F8F7F4",           // warm off-white
+  white: "#FFFFFF",
+  accentBar: "#4A7C6F",    // muted sage green
+  accentLight: "#EAF0EE",  // very pale sage tint
+  accentText: "#3A6259",
+  textMain: "#1C1C1A",
+  textMuted: "#7A7A74",
+  border: "#DDDDD8",
+  rule: "#C8C8C2",
+};
 
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitAmount: number;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-}
-
-export interface ModernInvoiceData {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  dueDate: Date | null;
-  invoiceNumber: string | null;
-  currency: string;
-  notes: string | null;
-  status: string;
-  customer: Customer;
-  lineItems: LineItem[];
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function formatMoney(cents: number, currency: string) {
+function fmt(cents: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency,
+    currency: currency || "USD",
     minimumFractionDigits: 2,
   }).format(cents / 100);
 }
 
-function formatDate(date: Date | string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("en-US", {
+function fmtDate(d: Date | string | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
 }
 
-// ── Palette ────────────────────────────────────────────────────────────────
-
-const SLATE = "#0F172A";
-const SLATE_MID = "#1E293B";
-const SLATE_LIGHT = "#334155";
-const AMBER = "#D97706";
-const AMBER_LIGHT = "#FEF3C7";
-const WHITE = "#FFFFFF";
-const GRAY_50 = "#F8FAFC";
-const GRAY_100 = "#F1F5F9";
-const GRAY_200 = "#E2E8F0";
-const GRAY_500 = "#64748B";
-const GRAY_700 = "#374151";
-
-// ── Styles ─────────────────────────────────────────────────────────────────
-
 const S = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
-    fontSize: 10,
-    backgroundColor: WHITE,
-    color: GRAY_700,
+    fontSize: 9,
+    padding: 0,
+    backgroundColor: C.bg,
+    color: C.textMain,
   },
 
-  // ── Hero header band ──
-  heroBand: {
-    backgroundColor: SLATE,
-    paddingTop: 36,
-    paddingBottom: 28,
-    paddingHorizontal: 48,
+  // Left accent bar
+  accentBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 6,
+    backgroundColor: C.accentBar,
+  },
+
+  body: {
+    marginLeft: 6,
+    padding: 44,
+  },
+
+  // ── Header ──
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
+    marginBottom: 48,
   },
-  heroLeft: {},
-  heroInvoiceLabel: {
-    fontSize: 8,
-    color: AMBER,
-    letterSpacing: 2,
-    marginBottom: 6,
-  },
-  heroCompanyName: {
+
+  companyName: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 22,
-    color: WHITE,
-    letterSpacing: -0.5,
-  },
-  heroRight: {
-    alignItems: "flex-end",
-  },
-  heroBigNumber: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 28,
-    color: AMBER,
-    letterSpacing: -0.5,
-  },
-  heroSubNumber: {
-    fontSize: 8,
-    color: GRAY_500,
-    marginTop: 3,
+    fontSize: 15,
+    color: C.textMain,
     letterSpacing: 0.5,
   },
 
-  // ── Amber accent bar ──
-  accentBar: {
-    backgroundColor: AMBER,
-    height: 4,
+  companyMeta: {
+    fontSize: 8,
+    color: C.textMuted,
+    marginTop: 3,
   },
 
-  // ── Body padding ──
-  body: {
-    paddingHorizontal: 48,
-    paddingTop: 28,
-    paddingBottom: 70,
+  invoiceLabel: {
+    fontSize: 8,
+    letterSpacing: 2,
+    color: C.accentBar,
+    textAlign: "right",
+    marginBottom: 4,
   },
 
-  // ── Two column info ──
-  infoGrid: {
-    flexDirection: "row",
-    marginBottom: 28,
-  },
-  infoColumn: {
-    flex: 1,
-    paddingRight: 16,
-  },
-  infoColumnRight: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  infoChip: {
-    fontSize: 7,
-    fontFamily: "Helvetica-Bold",
-    color: SLATE,
-    letterSpacing: 1.5,
-    marginBottom: 8,
-    paddingBottom: 4,
-    borderBottomWidth: 1.5,
-    borderBottomColor: AMBER,
-    borderBottomStyle: "solid",
-  },
-  infoName: {
+  invoiceNumber: {
     fontFamily: "Helvetica-Bold",
     fontSize: 12,
-    color: SLATE,
-    marginBottom: 4,
-  },
-  infoDetail: {
-    fontSize: 9,
-    color: GRAY_500,
-    marginTop: 2,
-  },
-  infoDetailRight: {
-    fontSize: 9,
-    color: GRAY_500,
-    marginTop: 2,
+    color: C.textMain,
     textAlign: "right",
   },
-  infoBoldRight: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 10,
-    color: SLATE,
-    textAlign: "right",
-    marginBottom: 4,
-  },
 
-  // ── Status chip ──
-  statusChip: {
-    marginTop: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    backgroundColor: AMBER_LIGHT,
-    borderRadius: 20,
-    alignSelf: "flex-end",
-  },
-  statusChipText: {
-    fontSize: 7.5,
-    fontFamily: "Helvetica-Bold",
-    color: AMBER,
-    letterSpacing: 0.8,
-  },
-
-  // ── Section header ──
-  sectionHeader: {
+  // ── Summary pill ──
+  summaryRow: {
     flexDirection: "row",
+    backgroundColor: C.white,
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 36,
     alignItems: "center",
-    marginBottom: 10,
+    justifyContent: "space-between",
   },
-  sectionDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: AMBER,
-    marginRight: 7,
+
+  summaryBlock: {
+    flex: 1,
   },
-  sectionTitle: {
+
+  summaryDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: C.border,
+    marginHorizontal: 20,
+  },
+
+  summaryLabel: {
+    fontSize: 7,
+    letterSpacing: 1.5,
+    color: C.textMuted,
+    marginBottom: 4,
+  },
+
+  summaryValue: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 9,
-    color: SLATE,
-    letterSpacing: 1,
+    fontSize: 11,
+    color: C.textMain,
+  },
+
+  summaryAccent: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 18,
+    color: C.accentBar,
   },
 
   // ── Table ──
-  tableWrapper: {
-    marginBottom: 6,
-    borderRadius: 2,
-    overflow: "hidden",
+  tableHeaderRow: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: C.accentLight,
+    borderRadius: 4,
+    marginBottom: 4,
   },
-  tableHeaderStyle: {
-    backgroundColor: SLATE_MID,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
+
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
-  tableHeaderText: {
-    color: GRAY_100,
-    fontFamily: "Helvetica-Bold",
-    fontSize: 7.5,
-    letterSpacing: 0.8,
+
+  colDesc: { flex: 3 },
+  colQty: { flex: 0.6, textAlign: "center" },
+  colUnit: { flex: 1.2, textAlign: "right" },
+  colTotal: { flex: 1.2, textAlign: "right" },
+
+  thText: {
+    fontSize: 7,
+    letterSpacing: 1,
+    color: C.accentText,
   },
-  tableBodyStyle: {
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-  },
-  tableBodyText: {
+
+  tdText: {
     fontSize: 9,
-    color: GRAY_700,
-    fontFamily: "Helvetica",
+    color: C.textMain,
   },
-  evenRowStyle: {
-    backgroundColor: GRAY_50,
+
+  tdMuted: {
+    fontSize: 9,
+    color: C.textMuted,
+  },
+
+  tdBold: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 9,
+    color: C.textMain,
   },
 
   // ── Totals ──
   totalsSection: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 12,
+    marginTop: 24,
+    alignItems: "flex-end",
   },
-  totalsInner: {
+
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     width: 220,
+    paddingVertical: 6,
+    borderTopWidth: 1.5,
+    borderTopColor: C.accentBar,
+    marginTop: 4,
   },
-  subtotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 5,
-    borderBottomWidth: 0.5,
-    borderBottomColor: GRAY_200,
-    borderBottomStyle: "solid",
-  },
-  subtotalLabel: {
-    fontSize: 8.5,
-    color: GRAY_500,
-  },
-  subtotalValue: {
-    fontSize: 8.5,
-    color: GRAY_700,
-  },
-  grandTotalBlock: {
-    backgroundColor: SLATE,
-    marginTop: 6,
-    padding: 12,
-    borderRadius: 2,
-  },
-  grandTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  grandTotalLabel: {
+
+  totalLabel: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 9,
-    color: GRAY_200,
-    letterSpacing: 1.2,
+    fontSize: 10,
+    letterSpacing: 1,
+    color: C.accentBar,
   },
-  grandTotalValue: {
+
+  totalValue: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 15,
-    color: AMBER,
+    fontSize: 13,
+    color: C.accentBar,
   },
 
   // ── Notes ──
-  notesBox: {
-    marginTop: 22,
-    padding: 14,
-    backgroundColor: GRAY_50,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: GRAY_200,
-    borderStyle: "solid",
+  notesSection: {
+    marginTop: 32,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
   },
-  notesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 7,
-  },
-  notesDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: SLATE_LIGHT,
-    marginRight: 6,
-  },
+
   notesLabel: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 7.5,
-    color: SLATE,
-    letterSpacing: 1.2,
+    fontSize: 7,
+    letterSpacing: 1.5,
+    color: C.textMuted,
+    marginBottom: 6,
   },
+
   notesText: {
     fontSize: 9,
-    color: GRAY_500,
-    lineHeight: 1.6,
+    color: C.textMuted,
+    lineHeight: 1.5,
   },
 
   // ── Footer ──
   footer: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: SLATE_MID,
-    paddingHorizontal: 48,
-    paddingVertical: 12,
+    bottom: 28,
+    left: 50,
+    right: 44,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  footerLeft: {
-    fontSize: 7.5,
-    color: GRAY_500,
-  },
-  footerRight: {
-    fontSize: 7.5,
-    color: AMBER,
-    fontFamily: "Helvetica-Bold",
+
+  footerText: {
+    fontSize: 7,
+    color: C.textMuted,
     letterSpacing: 0.5,
+  },
+
+  footerDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.accentBar,
   },
 });
 
-// ── Component ──────────────────────────────────────────────────────────────
-
-export function ModernInvoice({ invoice }: { invoice: ModernInvoiceData }) {
+export function ModernInvoice({ invoice }: { invoice: any }) {
   const total = invoice.lineItems.reduce(
-    (sum, item) => sum + item.quantity * item.unitAmount,
-    0,
+    (s: number, i: any) => s + i.quantity * i.unitAmount,
+    0
   );
-
-  const invoiceLabel = invoice.invoiceNumber
-    ? invoice.invoiceNumber
-    : `#${invoice.id.slice(-8).toUpperCase()}`;
-
-  const tableData = invoice.lineItems.map((item) => ({
-    description: item.description,
-    qty: String(item.quantity),
-    unitPrice: formatMoney(item.unitAmount, invoice.currency),
-    amount: formatMoney(item.quantity * item.unitAmount, invoice.currency),
-  }));
+  const invoiceLabel = invoice.invoiceNumber || `#${invoice.id?.slice(-8).toUpperCase()}`;
 
   return (
-    <Document
-      title={`Invoice ${invoiceLabel}`}
-      author="Invoice App"
-      subject={`Invoice for ${invoice.customer.name}`}
-    >
+    <Document>
       <Page size="A4" style={S.page}>
-        {/* ── Hero band ── */}
-        <View style={S.heroBand}>
-          <View style={S.heroLeft}>
-            <Text style={S.heroInvoiceLabel}>INVOICE</Text>
-            <Text style={S.heroCompanyName}>Your Company</Text>
-          </View>
-          <View style={S.heroRight}>
-            <Text style={S.heroBigNumber}>{invoiceLabel}</Text>
-            <Text style={S.heroSubNumber}>
-              {formatDate(invoice.createdAt)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Amber accent bar */}
+        {/* Left accent stripe */}
         <View style={S.accentBar} />
 
-        {/* ── Body ── */}
         <View style={S.body}>
-          {/* Info grid */}
-          <View style={S.infoGrid}>
-            {/* Bill To */}
-            <View style={S.infoColumn}>
-              <Text style={S.infoChip}>BILL TO</Text>
-              <Text style={S.infoName}>{invoice.customer.name}</Text>
-              <Text style={S.infoDetail}>{invoice.customer.email}</Text>
-              {invoice.customer.phone && (
-                <Text style={S.infoDetail}>{invoice.customer.phone}</Text>
-              )}
-              {invoice.customer.address && (
-                <Text style={S.infoDetail}>{invoice.customer.address}</Text>
-              )}
+          {/* ── Header ── */}
+          <View style={S.header}>
+            <View>
+              <Text style={S.companyName}>Your Company</Text>
+              <Text style={S.companyMeta}>your@company.com</Text>
+              <Text style={S.companyMeta}>www.yourcompany.com</Text>
             </View>
-
-            {/* Invoice details */}
-            <View style={S.infoColumnRight}>
-              <Text style={[S.infoChip, { textAlign: "right" }]}>
-                INVOICE DETAILS
-              </Text>
-              <Text style={S.infoBoldRight}>
-                Issued {formatDate(invoice.createdAt)}
-              </Text>
-              {invoice.dueDate && (
-                <Text style={S.infoDetailRight}>
-                  Due {formatDate(invoice.dueDate)}
-                </Text>
-              )}
-              <Text style={S.infoDetailRight}>{invoice.currency}</Text>
-              <View style={S.statusChip}>
-                <Text style={S.statusChipText}>{invoice.status}</Text>
-              </View>
+            <View>
+              <Text style={S.invoiceLabel}>INVOICE</Text>
+              <Text style={S.invoiceNumber}>{invoiceLabel}</Text>
             </View>
           </View>
 
-          {/* Section header */}
-          <View style={S.sectionHeader}>
-            <View style={S.sectionDot} />
-            <Text style={S.sectionTitle}>LINE ITEMS</Text>
+          {/* ── Summary pill ── */}
+          <View style={S.summaryRow}>
+            <View style={S.summaryBlock}>
+              <Text style={S.summaryLabel}>BILLED TO</Text>
+              <Text style={S.summaryValue}>{invoice.customer.name}</Text>
+              <Text style={[S.summaryLabel, { marginTop: 2 }]}>{invoice.customer.email}</Text>
+            </View>
+
+            <View style={S.summaryDivider} />
+
+            <View style={S.summaryBlock}>
+              <Text style={S.summaryLabel}>ISSUED</Text>
+              <Text style={S.summaryValue}>{fmtDate(invoice.createdAt)}</Text>
+            </View>
+
+            <View style={S.summaryDivider} />
+
+            <View style={S.summaryBlock}>
+              <Text style={S.summaryLabel}>DUE</Text>
+              <Text style={S.summaryValue}>{fmtDate(invoice.dueDate)}</Text>
+            </View>
+
+            <View style={S.summaryDivider} />
+
+            <View style={[S.summaryBlock, { alignItems: "flex-end" }]}>
+              <Text style={S.summaryLabel}>AMOUNT DUE</Text>
+              <Text style={S.summaryAccent}>{fmt(total, invoice.currency)}</Text>
+            </View>
           </View>
 
-          {/* Table */}
-     <View style={S.tableWrapper}>
-  {tableData.length === 0 ? (
-    <View
-      style={{
-        padding: 20,
-        alignItems: "center",
-        backgroundColor: GRAY_50,
-      }}
-    >
-      <Text style={{ fontSize: 10, color: GRAY_500 }}>
-        No line items
-      </Text>
-    </View>
-  ) : (
-    <View>
-      {/* Header */}
-      <View style={[S.tableHeaderStyle, { flexDirection: "row" }]}>
-        <Text style={[S.tableHeaderText, { flex: 0.45 }]}>
-          Description
-        </Text>
-        <Text style={[S.tableHeaderText, { flex: 0.13, textAlign: "center" }]}>
-          Qty
-        </Text>
-        <Text style={[S.tableHeaderText, { flex: 0.21, textAlign: "right" }]}>
-          Unit Price
-        </Text>
-        <Text style={[S.tableHeaderText, { flex: 0.21, textAlign: "right" }]}>
-          Amount
-        </Text>
-      </View>
+          {/* ── Line Items Table ── */}
+          <View style={S.tableHeaderRow}>
+            <Text style={[S.thText, S.colDesc]}>DESCRIPTION</Text>
+            <Text style={[S.thText, S.colQty]}>QTY</Text>
+            <Text style={[S.thText, S.colUnit]}>UNIT PRICE</Text>
+            <Text style={[S.thText, S.colTotal]}>TOTAL</Text>
+          </View>
 
-      {/* Rows */}
-      {tableData.map((row, i) => (
-        <View
-          key={i}
-          style={[
-            S.tableBodyStyle,
-            { flexDirection: "row" },
-           ...(i % 2 === 1 ? [S.evenRowStyle] : []),
-          ]}
-        >
-          <Text style={[S.tableBodyText, { flex: 0.45 }]}>
-            {row.description}
-          </Text>
-          <Text
-            style={[
-              S.tableBodyText,
-              { flex: 0.13, textAlign: "center" },
-            ]}
-          >
-            {row.qty}
-          </Text>
-          <Text
-            style={[
-              S.tableBodyText,
-              { flex: 0.21, textAlign: "right" },
-            ]}
-          >
-            {row.unitPrice}
-          </Text>
-          <Text
-            style={[
-              S.tableBodyText,
-              {
-                flex: 0.21,
-                textAlign: "right",
-                fontFamily: "Helvetica-Bold",
-              },
-            ]}
-          >
-            {row.amount}
-          </Text>
-        </View>
-      ))}
-    </View>
-  )}
-</View>
+          {invoice.lineItems.map((item: any, i: number) => (
+            <View key={i} style={S.tableRow}>
+              <Text style={[S.tdText, S.colDesc]}>{item.description}</Text>
+              <Text style={[S.tdMuted, S.colQty]}>{item.quantity}</Text>
+              <Text style={[S.tdMuted, S.colUnit]}>{fmt(item.unitAmount, invoice.currency)}</Text>
+              <Text style={[S.tdBold, S.colTotal]}>{fmt(item.quantity * item.unitAmount, invoice.currency)}</Text>
+            </View>
+          ))}
 
-          {/* Totals */}
+          {/* ── Totals ── */}
           <View style={S.totalsSection}>
-            <View style={S.totalsInner}>
-              <View style={S.grandTotalBlock}>
-                <View style={S.grandTotalRow}>
-                  <Text style={S.grandTotalLabel}>TOTAL DUE</Text>
-                  <Text style={S.grandTotalValue}>
-                    {formatMoney(total, invoice.currency)}
-                  </Text>
-                </View>
-              </View>
+            <View style={S.totalRow}>
+              <Text style={S.totalLabel}>TOTAL</Text>
+              <Text style={S.totalValue}>{fmt(total, invoice.currency)}</Text>
             </View>
           </View>
 
-          {/* Notes */}
+          {/* ── Notes ── */}
           {invoice.notes && (
-            <View style={S.notesBox}>
-              <View style={S.notesHeader}>
-                <View style={S.notesDot} />
-                <Text style={S.notesLabel}>NOTES</Text>
-              </View>
+            <View style={S.notesSection}>
+              <Text style={S.notesLabel}>NOTES</Text>
               <Text style={S.notesText}>{invoice.notes}</Text>
             </View>
           )}
@@ -554,10 +351,9 @@ export function ModernInvoice({ invoice }: { invoice: ModernInvoiceData }) {
 
         {/* ── Footer ── */}
         <View style={S.footer} fixed>
-          <Text style={S.footerLeft}>Thank you for your business.</Text>
-          <Text style={S.footerRight}>
-            {invoiceLabel} · {invoice.currency}
-          </Text>
+          <Text style={S.footerText}>Thank you for your business.</Text>
+          <View style={S.footerDot} />
+          <Text style={S.footerText}>{invoiceLabel}</Text>
         </View>
       </Page>
     </Document>

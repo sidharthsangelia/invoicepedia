@@ -27,6 +27,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { createInvoiceAction } from "@/actions/createInvoice";
 import { updateInvoiceAction } from "@/actions/updateInvoice";
+import { toast } from "sonner";
 
 // -----------------------------------------------------------------------
 // Zod Schema
@@ -120,7 +121,9 @@ function FormField({
         {required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
       {children}
-      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && !error && (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      )}
       {error && <p className="text-xs text-destructive font-medium">{error}</p>}
     </div>
   );
@@ -171,7 +174,10 @@ export function InvoiceForm({
     formState: { errors, isSubmitting },
   } = form;
 
-  const { fields, append, remove } = useFieldArray({ control, name: "lineItems" });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "lineItems",
+  });
 
   const watchedLineItems = watch("lineItems");
   const watchedCurrency = watch("currency");
@@ -185,15 +191,16 @@ export function InvoiceForm({
 
     const formData = new FormData();
 
-    if (isEdit && invoiceId) {
-      formData.set("invoiceId", invoiceId);
-    }
+    if (isEdit && invoiceId) formData.set("invoiceId", invoiceId);
 
     formData.set("customerName", values.customerName);
     formData.set("customerEmail", values.customerEmail);
-    if (values.customerPhone) formData.set("customerPhone", values.customerPhone);
-    if (values.customerAddress) formData.set("customerAddress", values.customerAddress);
-    if (values.invoiceNumber) formData.set("invoiceNumber", values.invoiceNumber);
+    if (values.customerPhone)
+      formData.set("customerPhone", values.customerPhone);
+    if (values.customerAddress)
+      formData.set("customerAddress", values.customerAddress);
+    if (values.invoiceNumber)
+      formData.set("invoiceNumber", values.invoiceNumber);
     formData.set("currency", values.currency);
     if (values.dueDate) formData.set("dueDate", values.dueDate);
     if (values.notes) formData.set("notes", values.notes);
@@ -204,16 +211,51 @@ export function InvoiceForm({
       formData.set(`lineItems[${i}][unitAmount]`, String(item.unitAmount));
     });
 
-    const action = isEdit ? updateInvoiceAction : createInvoiceAction;
-    const result = await action(formData);
+    try {
+      const action = isEdit ? updateInvoiceAction : createInvoiceAction;
+      const result = await action(formData);
 
-    // redirect() inside the action throws NEXT_REDIRECT — only land here on error
-    if (result && !result.success) {
-      if (result.error === "UNAUTHENTICATED") {
-        window.location.href = "/sign-in";
+      if (result && !result.success) {
+        if (result.error === "UNAUTHENTICATED") {
+          window.location.href = "/sign-in";
+          return;
+        }
+        setServerError(result.error);
+        toast.error(
+          isEdit ? "Failed to update invoice" : "Failed to create invoice",
+          {
+            description: result.error,
+            richColors: true,
+          },
+        );
         return;
       }
-      setServerError(result.error);
+
+      // Success
+      const invoiceLabel = values.invoiceNumber || "Invoice";
+      if (isEdit) {
+        toast.success("Invoice updated", {
+          description: `${invoiceLabel} has been saved successfully.`,
+          icon: <Pencil className="h-4 w-4" />,
+          richColors: true,
+        });
+      } else {
+        toast.success("Invoice created", {
+          description: `${invoiceLabel} has been created and is ready to send.`,
+          icon: <FileText className="h-4 w-4" />,
+          richColors: true,
+        });
+      }
+    } catch (err: any) {
+      // NEXT_REDIRECT throws — let it propagate so navigation works
+      if (err?.message?.includes("NEXT_REDIRECT")) throw err;
+
+      const message = err?.message ?? "Something went wrong. Please try again.";
+      setServerError(message);
+      toast.error("Unexpected error", {
+        description: message,
+        richColors: true,
+      });
     }
   }
 
@@ -237,10 +279,22 @@ export function InvoiceForm({
             name="customerName"
             control={control}
             render={({ field }) => (
-              <FormField label="Full Name" htmlFor="customerName" required error={errors.customerName?.message}>
-                <Input {...field} id="customerName" placeholder="Acme Corp"
+              <FormField
+                label="Full Name"
+                htmlFor="customerName"
+                required
+                error={errors.customerName?.message}
+              >
+                <Input
+                  {...field}
+                  id="customerName"
+                  placeholder="Acme Corp"
                   aria-invalid={!!errors.customerName}
-                  className={errors.customerName ? "border-destructive focus-visible:ring-destructive/30" : ""}
+                  className={
+                    errors.customerName
+                      ? "border-destructive focus-visible:ring-destructive/30"
+                      : ""
+                  }
                 />
               </FormField>
             )}
@@ -249,10 +303,23 @@ export function InvoiceForm({
             name="customerEmail"
             control={control}
             render={({ field }) => (
-              <FormField label="Email Address" htmlFor="customerEmail" required error={errors.customerEmail?.message}>
-                <Input {...field} id="customerEmail" type="email" placeholder="billing@acmecorp.com"
+              <FormField
+                label="Email Address"
+                htmlFor="customerEmail"
+                required
+                error={errors.customerEmail?.message}
+              >
+                <Input
+                  {...field}
+                  id="customerEmail"
+                  type="email"
+                  placeholder="billing@acmecorp.com"
                   aria-invalid={!!errors.customerEmail}
-                  className={errors.customerEmail ? "border-destructive focus-visible:ring-destructive/30" : ""}
+                  className={
+                    errors.customerEmail
+                      ? "border-destructive focus-visible:ring-destructive/30"
+                      : ""
+                  }
                 />
               </FormField>
             )}
@@ -261,8 +328,17 @@ export function InvoiceForm({
             name="customerPhone"
             control={control}
             render={({ field }) => (
-              <FormField label="Phone" htmlFor="customerPhone" error={errors.customerPhone?.message}>
-                <Input {...field} id="customerPhone" type="tel" placeholder="+1 (555) 000-0000" />
+              <FormField
+                label="Phone"
+                htmlFor="customerPhone"
+                error={errors.customerPhone?.message}
+              >
+                <Input
+                  {...field}
+                  id="customerPhone"
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                />
               </FormField>
             )}
           />
@@ -270,8 +346,16 @@ export function InvoiceForm({
             name="customerAddress"
             control={control}
             render={({ field }) => (
-              <FormField label="Billing Address" htmlFor="customerAddress" error={errors.customerAddress?.message}>
-                <Input {...field} id="customerAddress" placeholder="123 Main St, New York, NY 10001" />
+              <FormField
+                label="Billing Address"
+                htmlFor="customerAddress"
+                error={errors.customerAddress?.message}
+              >
+                <Input
+                  {...field}
+                  id="customerAddress"
+                  placeholder="123 Main St, New York, NY 10001"
+                />
               </FormField>
             )}
           />
@@ -282,15 +366,21 @@ export function InvoiceForm({
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">Invoice Details</CardTitle>
-          <CardDescription>Invoice meta information and settings.</CardDescription>
+          <CardDescription>
+            Invoice meta information and settings.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <Controller
             name="invoiceNumber"
             control={control}
             render={({ field }) => (
-              <FormField label="Invoice Number" htmlFor="invoiceNumber"
-                hint="Auto-generated if left blank" error={errors.invoiceNumber?.message}>
+              <FormField
+                label="Invoice Number"
+                htmlFor="invoiceNumber"
+                hint="Auto-generated if left blank"
+                error={errors.invoiceNumber?.message}
+              >
                 <Input {...field} id="invoiceNumber" placeholder="INV-001" />
               </FormField>
             )}
@@ -299,14 +389,21 @@ export function InvoiceForm({
             name="currency"
             control={control}
             render={({ field }) => (
-              <FormField label="Currency" htmlFor="currency" required error={errors.currency?.message}>
+              <FormField
+                label="Currency"
+                htmlFor="currency"
+                required
+                error={errors.currency?.message}
+              >
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger id="currency" className="w-full">
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -317,9 +414,17 @@ export function InvoiceForm({
             name="dueDate"
             control={control}
             render={({ field }) => (
-              <FormField label="Due Date" htmlFor="dueDate" error={errors.dueDate?.message}>
-                <Input {...field} id="dueDate" type="date"
-                  min={new Date().toISOString().split("T")[0]} />
+              <FormField
+                label="Due Date"
+                htmlFor="dueDate"
+                error={errors.dueDate?.message}
+              >
+                <Input
+                  {...field}
+                  id="dueDate"
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
+                />
               </FormField>
             )}
           />
@@ -332,10 +437,17 @@ export function InvoiceForm({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">Line Items</CardTitle>
-              <CardDescription className="mt-0.5">Services or products being billed.</CardDescription>
+              <CardDescription className="mt-0.5">
+                Services or products being billed.
+              </CardDescription>
             </div>
-            <Button type="button" variant="outline" size="sm"
-              onClick={() => append({ ...DEFAULT_LINE_ITEM })} className="gap-1.5 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ ...DEFAULT_LINE_ITEM })}
+              className="gap-1.5 shrink-0"
+            >
               <Plus className="h-3.5 w-3.5" />
               Add Item
             </Button>
@@ -343,13 +455,21 @@ export function InvoiceForm({
         </CardHeader>
         <CardContent className="space-y-3">
           {errors.lineItems?.root?.message && (
-            <p className="text-xs text-destructive font-medium">{errors.lineItems.root.message}</p>
+            <p className="text-xs text-destructive font-medium">
+              {errors.lineItems.root.message}
+            </p>
           )}
 
           <div className="hidden sm:grid sm:grid-cols-[1fr_100px_120px_40px] gap-3 px-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</span>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Qty</span>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Unit Price</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Description
+            </span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Qty
+            </span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Unit Price
+            </span>
             <span />
           </div>
 
@@ -360,7 +480,8 @@ export function InvoiceForm({
               const lineTotal = qty * unit;
 
               return (
-                <div key={field.id}
+                <div
+                  key={field.id}
                   className="rounded-lg border border-border bg-muted/30 p-3 sm:p-0 sm:bg-transparent sm:border-0 space-y-3 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_120px_40px] sm:gap-3 sm:items-start"
                 >
                   <Controller
@@ -368,13 +489,25 @@ export function InvoiceForm({
                     control={control}
                     render={({ field: f }) => (
                       <div className="space-y-1">
-                        <Label className="sm:hidden text-xs text-muted-foreground">Description</Label>
-                        <Input {...f} placeholder="Website design & development"
-                          aria-invalid={!!errors.lineItems?.[index]?.description}
-                          className={errors.lineItems?.[index]?.description ? "border-destructive focus-visible:ring-destructive/30" : ""}
+                        <Label className="sm:hidden text-xs text-muted-foreground">
+                          Description
+                        </Label>
+                        <Input
+                          {...f}
+                          placeholder="Website design & development"
+                          aria-invalid={
+                            !!errors.lineItems?.[index]?.description
+                          }
+                          className={
+                            errors.lineItems?.[index]?.description
+                              ? "border-destructive focus-visible:ring-destructive/30"
+                              : ""
+                          }
                         />
                         {errors.lineItems?.[index]?.description && (
-                          <p className="text-xs text-destructive">{errors.lineItems[index].description.message}</p>
+                          <p className="text-xs text-destructive">
+                            {errors.lineItems[index].description.message}
+                          </p>
                         )}
                       </div>
                     )}
@@ -384,14 +517,32 @@ export function InvoiceForm({
                     control={control}
                     render={({ field: f }) => (
                       <div className="space-y-1">
-                        <Label className="sm:hidden text-xs text-muted-foreground">Qty</Label>
-                        <Input {...f} type="number" min={1} placeholder="1"
-                          onChange={(e) => f.onChange(e.target.value === "" ? "" : parseInt(e.target.value, 10))}
+                        <Label className="sm:hidden text-xs text-muted-foreground">
+                          Qty
+                        </Label>
+                        <Input
+                          {...f}
+                          type="number"
+                          min={1}
+                          placeholder="1"
+                          onChange={(e) =>
+                            f.onChange(
+                              e.target.value === ""
+                                ? ""
+                                : parseInt(e.target.value, 10),
+                            )
+                          }
                           aria-invalid={!!errors.lineItems?.[index]?.quantity}
-                          className={errors.lineItems?.[index]?.quantity ? "border-destructive focus-visible:ring-destructive/30" : ""}
+                          className={
+                            errors.lineItems?.[index]?.quantity
+                              ? "border-destructive focus-visible:ring-destructive/30"
+                              : ""
+                          }
                         />
                         {errors.lineItems?.[index]?.quantity && (
-                          <p className="text-xs text-destructive">{errors.lineItems[index].quantity.message}</p>
+                          <p className="text-xs text-destructive">
+                            {errors.lineItems[index].quantity.message}
+                          </p>
                         )}
                       </div>
                     )}
@@ -401,28 +552,56 @@ export function InvoiceForm({
                     control={control}
                     render={({ field: f }) => (
                       <div className="space-y-1">
-                        <Label className="sm:hidden text-xs text-muted-foreground">Unit Price</Label>
+                        <Label className="sm:hidden text-xs text-muted-foreground">
+                          Unit Price
+                        </Label>
                         <div className="relative">
                           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                             {currencySymbol(watchedCurrency)}
                           </span>
-                          <Input {...f} type="number" min={0} step={0.01} placeholder="0.00"
-                            className={["pl-7", errors.lineItems?.[index]?.unitAmount ? "border-destructive focus-visible:ring-destructive/30" : ""].join(" ")}
-                            onChange={(e) => f.onChange(e.target.value === "" ? "" : parseFloat(e.target.value))}
-                            aria-invalid={!!errors.lineItems?.[index]?.unitAmount}
+                          <Input
+                            {...f}
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            placeholder="0.00"
+                            className={[
+                              "pl-7",
+                              errors.lineItems?.[index]?.unitAmount
+                                ? "border-destructive focus-visible:ring-destructive/30"
+                                : "",
+                            ].join(" ")}
+                            onChange={(e) =>
+                              f.onChange(
+                                e.target.value === ""
+                                  ? ""
+                                  : parseFloat(e.target.value),
+                              )
+                            }
+                            aria-invalid={
+                              !!errors.lineItems?.[index]?.unitAmount
+                            }
                           />
                         </div>
                         {errors.lineItems?.[index]?.unitAmount && (
-                          <p className="text-xs text-destructive">{errors.lineItems[index].unitAmount.message}</p>
+                          <p className="text-xs text-destructive">
+                            {errors.lineItems[index].unitAmount.message}
+                          </p>
                         )}
                       </div>
                     )}
                   />
                   <div className="flex sm:block items-center justify-between">
                     <span className="text-xs text-muted-foreground sm:hidden">
-                      Line total: <span className="font-medium text-foreground">{formatCurrency(lineTotal, watchedCurrency)}</span>
+                      Line total:{" "}
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(lineTotal, watchedCurrency)}
+                      </span>
                     </span>
-                    <Button type="button" variant="ghost" size="icon"
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => fields.length > 1 && remove(index)}
                       disabled={fields.length === 1}
                       className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
@@ -447,7 +626,9 @@ export function InvoiceForm({
               </div>
               <div className="flex justify-between gap-8 font-semibold text-base border-t border-border pt-1.5 mt-1.5">
                 <span>Total</span>
-                <span className="tabular-nums">{formatCurrency(subtotal, watchedCurrency)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(subtotal, watchedCurrency)}
+                </span>
               </div>
             </div>
           </div>
@@ -458,17 +639,25 @@ export function InvoiceForm({
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">Notes</CardTitle>
-          <CardDescription>Optional notes visible to your customer on the invoice.</CardDescription>
+          <CardDescription>
+            Optional notes visible to your customer on the invoice.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Controller
             name="notes"
             control={control}
             render={({ field }) => (
-              <FormField label="Internal / Customer Notes" htmlFor="notes"
+              <FormField
+                label="Internal / Customer Notes"
+                htmlFor="notes"
                 error={errors.notes?.message}
-                hint="Payment terms, thank-you message, bank details, etc.">
-                <Textarea {...field} id="notes" rows={4}
+                hint="Payment terms, thank-you message, bank details, etc."
+              >
+                <Textarea
+                  {...field}
+                  id="notes"
+                  rows={4}
                   placeholder="Payment due within 30 days. Thank you for your business!"
                   className="resize-none"
                 />
@@ -481,11 +670,20 @@ export function InvoiceForm({
       {/* ── Actions ── */}
       <div className="flex items-center justify-end gap-3 pb-8">
         {!isEdit && (
-          <Button type="button" variant="outline" onClick={() => form.reset()} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => form.reset()}
+            disabled={isSubmitting}
+          >
             Reset
           </Button>
         )}
-        <Button type="submit" disabled={isSubmitting} className="min-w-[160px] gap-2">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="min-w-[160px] gap-2"
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -493,7 +691,11 @@ export function InvoiceForm({
             </>
           ) : (
             <>
-              {isEdit ? <Pencil className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+              {isEdit ? (
+                <Pencil className="h-4 w-4" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
               {isEdit ? "Save Changes" : "Create Invoice"}
             </>
           )}
