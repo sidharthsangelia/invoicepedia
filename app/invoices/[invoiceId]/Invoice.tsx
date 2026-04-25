@@ -19,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -37,8 +36,6 @@ import {
   Ellipsis,
   Trash2,
   ArrowLeft,
-  CalendarClock,
-  Hash,
   Mail,
   Phone,
   MapPin,
@@ -52,6 +49,9 @@ import { cn } from "@/lib/utils";
 import { InvoiceStatus } from "@/generated/prisma/enums";
 import { updateStatusAction } from "@/actions/updateInvoiceStatus";
 import { deleteInvoiceAction } from "@/actions/deleteInvoice";
+import InvoicePDFButton from "./InvoicePdfButton";
+import { toast } from "sonner";
+ 
 
 // -----------------------------------------------------------------------
 // Types — mirror Prisma includes in page.tsx
@@ -190,6 +190,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
     setCurrentStatus(next);
     try {
       await updateStatusAction(formData);
+      toast.success(`Invoice marked as ${STATUS_CONFIG[next].label}`,{richColors: true});
     } catch {
       setCurrentStatus(previous);
     }
@@ -241,7 +242,10 @@ export default function Invoice({ invoice }: InvoiceProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Change status */}
+            {/* ── PDF Button ── */}
+            <InvoicePDFButton invoice={invoice} />
+
+            {/* Edit (draft only) */}
             {currentStatus === InvoiceStatus.DRAFT && (
               <Button asChild variant="default" size="sm" className="gap-1.5">
                 <Link href={`/invoices/${invoice.id}/edit`}>
@@ -250,6 +254,8 @@ export default function Invoice({ invoice }: InvoiceProps) {
                 </Link>
               </Button>
             )}
+
+            {/* Change status */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
