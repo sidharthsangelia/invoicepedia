@@ -1,4 +1,4 @@
-import React from "react";
+ 
 import {
   Document,
   Page,
@@ -6,7 +6,7 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-
+import { InvoiceForPDF, UserCompany } from "@/types/invoice";
 // ── Identity: "Freelancer" ───────────────────────────────────────────────────
 // Target: Solo developers, technical contractors, independent consultants who
 // want something professional without being corporate. Inspired by technical
@@ -251,7 +251,8 @@ const S = StyleSheet.create({
   footerRight: { fontSize: 7.5, color: C.muted },
 });
 
-export function MinimalMonoInvoice({ invoice }: { invoice: any }) {
+export function MinimalMonoInvoice({ invoice, user }: { invoice: InvoiceForPDF;
+  user: UserCompany;}) {
   const subtotal = invoice.lineItems.reduce(
     (s: number, i: any) => s + i.quantity * i.unitAmount,
     0
@@ -264,9 +265,9 @@ export function MinimalMonoInvoice({ invoice }: { invoice: any }) {
       <Page size="A4" style={S.page}>
         <View style={S.header}>
           <View>
-            <Text style={S.companyName}>YOUR NAME</Text>
-            <Text style={S.companyDetail}>your@email.com</Text>
-            <Text style={S.companyDetail}>yourwebsite.com</Text>
+            <Text style={S.companyName}>{user.companyName}</Text>
+            <Text style={S.companyDetail}>{user.companyEmail}</Text>
+            <Text style={S.companyDetail}>{user.companyWebsite}</Text>
           </View>
           <View>
             <Text style={S.invoiceWord}>INVOICE</Text>

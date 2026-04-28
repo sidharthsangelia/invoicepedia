@@ -6,6 +6,7 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
+import { InvoiceForPDF, UserCompany } from "@/types/invoice";
 
 // ── Palette — Agency: airy, confident, creative-studio feel ─────────────────
 const C = {
@@ -258,7 +259,8 @@ const S = StyleSheet.create({
   },
 });
 
-export function ModernInvoice({ invoice }: { invoice: any }) {
+export function ModernInvoice({ invoice, user }: { invoice: InvoiceForPDF;
+  user: UserCompany;}) {
   const total = invoice.lineItems.reduce(
     (s: number, i: any) => s + i.quantity * i.unitAmount,
     0
@@ -275,9 +277,9 @@ export function ModernInvoice({ invoice }: { invoice: any }) {
           {/* ── Header ── */}
           <View style={S.header}>
             <View>
-              <Text style={S.companyName}>Your Company</Text>
-              <Text style={S.companyMeta}>your@company.com</Text>
-              <Text style={S.companyMeta}>www.yourcompany.com</Text>
+               <Text style={S.companyName}>{user.companyName}</Text>
+              <Text style={S.companyMeta}>{user.companyEmail}</Text>
+              <Text style={S.companyMeta}>{user.companyWebsite}</Text>
             </View>
             <View>
               <Text style={S.invoiceLabel}>INVOICE</Text>

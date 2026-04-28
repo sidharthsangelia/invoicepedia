@@ -51,49 +51,12 @@ import { updateStatusAction } from "@/actions/updateInvoiceStatus";
 import { deleteInvoiceAction } from "@/actions/deleteInvoice";
 import InvoicePDFButton from "./InvoicePdfButton";
 import { toast } from "sonner";
-
-// -----------------------------------------------------------------------
-// Types — mirror Prisma includes in page.tsx
-// -----------------------------------------------------------------------
-
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitAmount: number; // cents
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-}
-
-interface Activity {
-  id: string;
-  createdAt: Date;
-  type: string;
-  note: string | null;
-}
-
-interface InvoiceData {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  dueDate: Date | null;
-  invoiceNumber: string | null;
-  currency: string;
-  notes: string | null;
-  status: InvoiceStatus;
-  customer: Customer;
-  lineItems: LineItem[];
-  activities: Activity[];
-}
+import { InvoiceWithRelations, UserCompany } from "@/types/invoice";
+ 
 
 interface InvoiceProps {
-  invoice: InvoiceData;
+  invoice: InvoiceWithRelations;
+  user: UserCompany;
 }
 
 // -----------------------------------------------------------------------
@@ -175,7 +138,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 // Component
 // -----------------------------------------------------------------------
 
-export default function Invoice({ invoice }: InvoiceProps) {
+export default function Invoice({ invoice , user }: InvoiceProps  ) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [currentStatus, setCurrentStatus] = useOptimistic(
@@ -190,7 +153,8 @@ export default function Invoice({ invoice }: InvoiceProps) {
     try {
       await updateStatusAction(formData);
       toast.success(`Invoice marked as ${STATUS_CONFIG[next].label}`, {
-        richColors: true, position: "top-right"
+        richColors: true,
+        position: "top-right",
       });
     } catch {
       setCurrentStatus(previous);
@@ -244,7 +208,7 @@ export default function Invoice({ invoice }: InvoiceProps) {
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
             {/* ── PDF Button ── */}
-            <InvoicePDFButton invoice={invoice} />
+            <InvoicePDFButton invoice={invoice} user={user} />
 
             {/* Edit (draft only) */}
             {currentStatus === InvoiceStatus.DRAFT && (

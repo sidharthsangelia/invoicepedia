@@ -15,14 +15,7 @@ export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
   const onboarded = (sessionClaims?.publicMetadata as any)?.onboarded === true;
 
-  console.log({
-    url: req.url,
-    userId,
-    publicMetadata: sessionClaims?.publicMetadata,
-    onboarded: (sessionClaims?.publicMetadata as any)?.onboarded,
-    isOnboardingRoute: isOnboarding(req),
-    isPublicRoute: isPublic(req),
-  });
+ 
 
   // Authenticated + not onboarded + not already on /onboarding → force onboarding
   if (userId && !onboarded && !isOnboarding(req) && !isPublic(req)) {

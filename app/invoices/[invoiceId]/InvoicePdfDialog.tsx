@@ -12,43 +12,19 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Loader2, Check, FileText, AlertTriangle } from "lucide-react";
+
 import StudioLuxePreview from "./pdf-templates/template-preview/StudioLuxePreview";
 import MinimalMonoPreview from "./pdf-templates/template-preview/MinimalMonoPreview";
 import ModernPreview from "./pdf-templates/template-preview/ModernPreview";
 import ClassicPreview from "./pdf-templates/template-preview/ClassicPreview";
 
+import { InvoiceForPDF, UserCompany } from "@/types/invoice";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitAmount: number;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-}
-
-interface InvoiceData {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  dueDate: Date | null;
-  invoiceNumber: string | null;
-  currency: string;
-  notes: string | null;
-  status: string;
-  customer: Customer;
-  lineItems: LineItem[];
-}
-
 interface InvoicePDFDialogProps {
-  invoice: InvoiceData;
+  invoice: InvoiceForPDF;
+  user: UserCompany;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -57,13 +33,7 @@ type TemplateId = "classic" | "modern" | "mono" | "luxe";
 
 // ── Template Config ────────────────────────────────────────────────────────
 
-const TEMPLATES: {
-  id: TemplateId;
-  label: string;
-  tagline: string;
-  traits: string[];
-  Preview: React.FC;
-}[] = [
+const TEMPLATES = [
   {
     id: "classic",
     label: "Classic",
@@ -71,7 +41,6 @@ const TEMPLATES: {
     traits: ["Serif typography", "Warm cream tones", "Timeless layout"],
     Preview: ClassicPreview,
   },
-
   {
     id: "modern",
     label: "Agency",
@@ -90,10 +59,10 @@ const TEMPLATES: {
     id: "luxe",
     label: "Consultant",
     tagline: "Refined · Authoritative · Warm",
-    traits: ["Amber accent rule", "FROM / TO layout", "Stone colour palette"],
+    traits: ["Amber accent rule", "FROM / TO layout", "Stone palette"],
     Preview: StudioLuxePreview,
   },
-];
+] as const;
 
 const TEMPLATE_MAP = {
   classic: () => import("./pdf-templates/ClassicInvoice"),
@@ -102,54 +71,79 @@ const TEMPLATE_MAP = {
   luxe: () => import("./pdf-templates/StudioLuxeInvoice"),
 };
 
+// ── Helper: safely extract component ────────────────────────────────────────
+
+function getTemplateComponent(mod: any) {
+  return (
+    mod.ClassicInvoice ||
+    mod.ModernInvoice ||
+    mod.MinimalMonoInvoice ||
+    mod.StudioLuxeInvoice ||
+    mod.default
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function InvoicePDFDialog({
   invoice,
   open,
   onOpenChange,
+  user,
 }: InvoicePDFDialogProps) {
   const [selected, setSelected] = useState<TemplateId>("classic");
   const [generating, setGenerating] = useState(false);
 
   async function handleGenerate() {
     setGenerating(true);
-    try {
-      // Dynamic imports — loaded only on demand, no SSR issues
-      const [{ pdf }, templateMod] = await Promise.all([
-        import("@react-pdf/renderer"),
-        TEMPLATE_MAP[selected](),
-      ]);
 
-      const Template = Object.values(templateMod)[0];
+    try {
+      // ✅ import pdf ONLY ONCE
+      const { pdf } = await import("@react-pdf/renderer");
+
+      // ✅ load template
+      const templateMod = await TEMPLATE_MAP[selected]();
+
+      const Template = getTemplateComponent(templateMod);
+
+      if (!Template) {
+        throw new Error("Template component not found");
+      }
 
       const invoiceLabel = invoice.invoiceNumber
         ? invoice.invoiceNumber
         : invoice.id.slice(-8).toUpperCase();
 
-      const blob = await pdf(<Template invoice={invoice} />).toBlob();
+      // ✅ IMPORTANT: pass props correctly
+      const element = <Template invoice={invoice} user={user} />;
+
+      const blob = await pdf(element).toBlob();
 
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `invoice-${invoiceLabel}.pdf`;
-      anchor.click();
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice-${invoiceLabel}.pdf`;
+      a.click();
+
       URL.revokeObjectURL(url);
 
       onOpenChange(false);
+
       toast.success("PDF generated!", {
-        description: `invoice-${invoiceLabel}.pdf has been downloaded.`,
+        description: `invoice-${invoiceLabel}.pdf downloaded`,
         icon: <FileText className="h-4 w-4" />,
         richColors: true,
         position: "top-right",
       });
     } catch (err) {
       console.error("PDF generation failed:", err);
+
       toast.error("Generation failed", {
         description: "Something went wrong. Please try again.",
-        richColors: true,
         icon: <AlertTriangle className="h-4 w-4" />,
-        position: "top-right"
+        richColors: true,
+        position: "top-right",
       });
     } finally {
       setGenerating(false);
@@ -160,59 +154,43 @@ export default function InvoicePDFDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl flex flex-col max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold tracking-tight">
-            Generate Invoice PDF
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Choose a design template for your invoice. The PDF will include all
-            line items, customer details, and invoice metadata.
+          <DialogTitle>Generate Invoice PDF</DialogTitle>
+          <DialogDescription>
+            Choose a design template for your invoice.
           </DialogDescription>
         </DialogHeader>
 
-        {/* ── Template Cards ── scrollable middle */}
-        <div className="flex-1 overflow-y-auto no-scrollbar -mx-6 px-6 py-1">
+        {/* Templates */}
+        <div className="flex-1 overflow-y-auto -mx-6 px-6 py-1">
           <div className="grid grid-cols-2 gap-3">
             {TEMPLATES.map(({ id, label, tagline, traits, Preview }) => {
               const isSelected = selected === id;
+
               return (
                 <button
                   key={id}
-                  type="button"
-                  onClick={() => setSelected(id)}
+                  onClick={() => setSelected(id as TemplateId)}
                   className={cn(
-                    "group relative flex flex-col gap-2.5 rounded-xl border-2 p-3 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "group relative flex flex-col gap-2.5 rounded-xl border-2 p-3 text-left transition",
                     isSelected
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border hover:border-muted-foreground/30 hover:bg-muted/40",
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/40"
                   )}
                 >
                   {isSelected && (
-                    <span className="absolute top-2.5 right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-                      <Check className="h-3 w-3" />
+                    <span className="absolute top-2 right-2">
+                      <Check className="h-4 w-4" />
                     </span>
                   )}
+
                   <Preview />
-                  <div className="pt-0.5">
-                    <p className="text-sm font-semibold leading-none mb-1">
-                      {label}
-                    </p>
+
+                  <div>
+                    <p className="text-sm font-semibold">{label}</p>
                     <p className="text-xs text-muted-foreground">{tagline}</p>
-                    <ul className="mt-2 space-y-0.5">
+                    <ul className="mt-2 text-xs text-muted-foreground">
                       {traits.map((t) => (
-                        <li
-                          key={t}
-                          className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                        >
-                          <span
-                            className={cn(
-                              "h-1 w-1 rounded-full shrink-0",
-                              isSelected
-                                ? "bg-primary"
-                                : "bg-muted-foreground/50",
-                            )}
-                          />
-                          {t}
-                        </li>
+                        <li key={t}>• {t}</li>
                       ))}
                     </ul>
                   </div>
@@ -222,8 +200,8 @@ export default function InvoicePDFDialog({
           </div>
         </div>
 
-        {/* ── Actions ── sticky footer */}
-        <div className="flex justify-end gap-2 pt-3 border-t border-border">
+        {/* Footer */}
+        <div className="flex justify-end gap-2 pt-3 border-t">
           <Button
             variant="outline"
             size="sm"
@@ -232,20 +210,20 @@ export default function InvoicePDFDialog({
           >
             Cancel
           </Button>
+
           <Button
             size="sm"
             onClick={handleGenerate}
             disabled={generating}
-            className="gap-1.5 min-w-[130px]"
           >
             {generating ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Generating…
               </>
             ) : (
               <>
-                <FileText className="h-3.5 w-3.5" />
+                <FileText className="h-4 w-4" />
                 Generate PDF
               </>
             )}

@@ -17,14 +17,24 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
   if (!invoiceId || invoiceId.length < 1) {
     throw new Error("Invalid Invoice ID");
   }
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: {
+      companyName: true,
+      companyEmail: true,
+      companyWebsite: true,
+      companyLogoUrl: true,
+    },
+  });
 
+  if (!user) throw new Error("User not found");
+
+  
   const invoice = await prisma.invoice.findFirst({
     where: {
       id: invoiceId,
       deletedAt: null,
-      ...(orgId
-        ? { organizationId: orgId }
-        : { userId, organizationId: null }),
+    userId: userId,
     },
     include: {
       customer: {
@@ -45,6 +55,7 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
         },
         orderBy: { createdAt: "asc" },
       },
+
       activities: {
         select: {
           id: true,
@@ -59,5 +70,5 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
 
   if (!invoice) notFound();
 
-  return <Invoice invoice={invoice} />;
+  return <Invoice invoice={invoice} user={user} />;
 }

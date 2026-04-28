@@ -6,6 +6,7 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
+import { InvoiceForPDF, UserCompany } from "@/types/invoice";
 
 // ── Identity: "Consultant" ───────────────────────────────────────────────────
 // Target: Independent consultants, coaches, lawyers, therapists, and other
@@ -287,7 +288,8 @@ const S = StyleSheet.create({
   footerRight: { fontSize: 7.5, color: C.muted },
 });
 
-export function StudioLuxeInvoice({ invoice }: { invoice: any }) {
+export function StudioLuxeInvoice({ invoice, user }: { invoice: InvoiceForPDF;
+  user: UserCompany;}) {
   const subtotal = invoice.lineItems.reduce(
     (s: number, i: any) => s + i.quantity * i.unitAmount,
     0
@@ -304,7 +306,7 @@ export function StudioLuxeInvoice({ invoice }: { invoice: any }) {
         {/* ── Letterhead ── */}
         <View style={S.letterhead}>
           <View>
-            <Text style={S.studioName}>Your Studio</Text>
+            <Text style={S.studioName}>{user.companyName}</Text>
             <Text style={S.studioSub}>Independent Consulting</Text>
           </View>
           <View style={S.invoiceRight}>
@@ -317,9 +319,9 @@ export function StudioLuxeInvoice({ invoice }: { invoice: any }) {
         <View style={S.parties}>
           <View style={S.party}>
             <Text style={S.partyRole}>FROM</Text>
-            <Text style={S.partyName}>Your Studio</Text>
-            <Text style={S.partyDetail}>your@studio.com</Text>
-            <Text style={S.partyDetail}>www.yourstudio.com</Text>
+            <Text style={S.partyName}>{user.companyName}</Text>
+            <Text style={S.partyDetail}>{user.companyEmail}</Text>
+            <Text style={S.partyDetail}>{user.companyWebsite}</Text>
           </View>
 
           <View style={S.partyDivider} />

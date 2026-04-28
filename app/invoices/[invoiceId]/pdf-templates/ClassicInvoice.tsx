@@ -7,35 +7,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitAmount: number;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-}
-
-export interface ClassicInvoiceData {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  dueDate: Date | null;
-  invoiceNumber: string | null;
-  currency: string;
-  notes: string | null;
-  status: string;
-  customer: Customer;
-  lineItems: LineItem[];
-}
+import { InvoiceForPDF, UserCompany } from "@/types/invoice";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -222,7 +194,8 @@ const S = StyleSheet.create({
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function ClassicInvoice({ invoice }: { invoice: ClassicInvoiceData }) {
+export function ClassicInvoice({ invoice, user }: { invoice: InvoiceForPDF;
+  user: UserCompany;}) {
   const total = invoice.lineItems.reduce(
     (sum, item) => sum + item.quantity * item.unitAmount,
     0
@@ -250,9 +223,9 @@ export function ClassicInvoice({ invoice }: { invoice: ClassicInvoiceData }) {
           </View>
 
           <View style={S.company}>
-            <Text style={S.companyName}>Your Company</Text>
-            <Text style={S.companyDetail}>your@company.com</Text>
-            <Text style={S.companyDetail}>www.yourcompany.com</Text>
+            <Text style={S.companyName}>{user.companyName}</Text>
+            <Text style={S.companyDetail}>{user.companyEmail}</Text>
+            <Text style={S.companyDetail}>{user.companyWebsite}</Text>
           </View>
         </View>
 
