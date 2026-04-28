@@ -51,7 +51,6 @@ import { updateStatusAction } from "@/actions/updateInvoiceStatus";
 import { deleteInvoiceAction } from "@/actions/deleteInvoice";
 import InvoicePDFButton from "./InvoicePdfButton";
 import { toast } from "sonner";
- 
 
 // -----------------------------------------------------------------------
 // Types — mirror Prisma includes in page.tsx
@@ -190,7 +189,9 @@ export default function Invoice({ invoice }: InvoiceProps) {
     setCurrentStatus(next);
     try {
       await updateStatusAction(formData);
-      toast.success(`Invoice marked as ${STATUS_CONFIG[next].label}`,{richColors: true});
+      toast.success(`Invoice marked as ${STATUS_CONFIG[next].label}`, {
+        richColors: true, position: "top-right"
+      });
     } catch {
       setCurrentStatus(previous);
     }

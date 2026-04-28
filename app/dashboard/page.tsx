@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  CirclePlus,
+
   FileText,
   TrendingUp,
   Clock,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/db/prisma";
 import { cn } from "@/lib/utils";
-import Container from "@/components/Container";
+
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { InvoiceStatus } from "@/generated/prisma/enums";
@@ -79,11 +79,7 @@ export default async function DashboardPage() {
     redirect("/sign-in");
   }
 
-  const hasSilverPlan = has({ plan: "silver" });
-  if (!hasSilverPlan) {
-    redirect("/pricing");
-  }
-
+  
   const whereClause = {
     deletedAt: null,
     ...(orgId ? { organizationId: orgId } : { userId, organizationId: null }),

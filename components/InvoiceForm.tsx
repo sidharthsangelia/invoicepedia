@@ -167,6 +167,26 @@ export function InvoiceForm({
     },
   });
 
+  React.useEffect(() => {
+    if (isEdit) return;
+
+    const pending = sessionStorage.getItem("pendingInvoice");
+    if (!pending) return;
+
+    try {
+      const saved = JSON.parse(pending) as InvoiceFormValues;
+      form.reset(saved);
+      sessionStorage.removeItem("pendingInvoice");
+      sessionStorage.removeItem("pendingRedirect"); // clean this up too
+      toast.info("Your invoice draft has been restored.", {
+        description: "We saved your progress while you signed in.",position: "top-right"
+      });
+    } catch {
+      sessionStorage.removeItem("pendingInvoice");
+      sessionStorage.removeItem("pendingRedirect");
+    }
+  }, []);
+
   const {
     control,
     handleSubmit,
@@ -217,7 +237,14 @@ export function InvoiceForm({
 
       if (result && !result.success) {
         if (result.error === "UNAUTHENTICATED") {
-          window.location.href = "/sign-in";
+          // Save entire form state to sessionStorage
+          sessionStorage.setItem(
+            "pendingInvoice",
+            JSON.stringify(values), // values is already typed InvoiceFormValues
+          );
+      
+          sessionStorage.setItem("pendingRedirect", "/invoices/new");
+          window.location.href = "/sign-up?redirect_url=/onboarding";
           return;
         }
         setServerError(result.error);
@@ -226,6 +253,7 @@ export function InvoiceForm({
           {
             description: result.error,
             richColors: true,
+            position: "top-right"
           },
         );
         return;
@@ -238,12 +266,13 @@ export function InvoiceForm({
           description: `${invoiceLabel} has been saved successfully.`,
           icon: <Pencil className="h-4 w-4" />,
           richColors: true,
+          position: "top-right",
         });
       } else {
         toast.success("Invoice created", {
           description: `${invoiceLabel} has been created and is ready to send.`,
           icon: <FileText className="h-4 w-4" />,
-          richColors: true,
+          richColors: true, position: "top-right",
         });
       }
     } catch (err: any) {
@@ -254,7 +283,7 @@ export function InvoiceForm({
       setServerError(message);
       toast.error("Unexpected error", {
         description: message,
-        richColors: true,
+        richColors: true, position: "top-right"
       });
     }
   }

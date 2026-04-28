@@ -4,12 +4,37 @@ const isPublic = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/invoices/new',        // ← add this, let anyone visit the form
+  '/invoices/new',      
   '/invoices(.*)/payment',
   '/pricing(.*)',
 ])
 
+const isOnboarding = createRouteMatcher(['/onboarding(.*)']);
+
 export default clerkMiddleware(async (auth, req) => {
+  const { userId, sessionClaims } = await auth();
+  const onboarded = (sessionClaims?.publicMetadata as any)?.onboarded === true;
+
+  console.log({
+    url: req.url,
+    userId,
+    publicMetadata: sessionClaims?.publicMetadata,
+    onboarded: (sessionClaims?.publicMetadata as any)?.onboarded,
+    isOnboardingRoute: isOnboarding(req),
+    isPublicRoute: isPublic(req),
+  });
+
+  // Authenticated + not onboarded + not already on /onboarding → force onboarding
+  if (userId && !onboarded && !isOnboarding(req) && !isPublic(req)) {
+    return Response.redirect(new URL('/onboarding', req.url));
+  }
+
+  // Authenticated + onboarded + trying to visit /onboarding → send to dashboard
+  if (userId && onboarded && isOnboarding(req)) {
+    return Response.redirect(new URL('/dashboard', req.url));
+  }
+
+
   if (!isPublic(req)) await auth.protect()
 })
 

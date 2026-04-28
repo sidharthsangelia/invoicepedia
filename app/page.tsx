@@ -5,7 +5,7 @@ import FinalCta from "@/components/FinallCta";
 
 import Hero from "@/components/Hero";
 import { DotPattern } from "@/components/magicui/dot-pattern";
-import Pricing from "@/components/Pricing";
+ 
 import TrustedPartners from "@/components/TrustedPartners";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +27,7 @@ export default function Home() {
         <div className=" flex min-h-screen justify-center mx-auto max-w-5xl">
           <Features />
         </div>
-        <div className=" flex min-h-screen justify-center mx-auto max-w-5xl">
-         <Pricing/>
-        </div>
+     
         <div className=" flex min-h-screen justify-center mx-auto max-w-5xl">
          <Faq/>
         </div>

@@ -141,6 +141,7 @@ export default function InvoicePDFDialog({
         description: `invoice-${invoiceLabel}.pdf has been downloaded.`,
         icon: <FileText className="h-4 w-4" />,
         richColors: true,
+        position: "top-right",
       });
     } catch (err) {
       console.error("PDF generation failed:", err);
@@ -148,6 +149,7 @@ export default function InvoicePDFDialog({
         description: "Something went wrong. Please try again.",
         richColors: true,
         icon: <AlertTriangle className="h-4 w-4" />,
+        position: "top-right"
       });
     } finally {
       setGenerating(false);

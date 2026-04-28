@@ -25,7 +25,7 @@ export default function Hero() {
           <Button size="lg" className="">
             <Link
               className="flex flex-row space-x-2 items-center"
-              href="/dashboard"
+              href="/invoices/new"
             >
               Start Invoicing
               <ArrowRight />
