@@ -57,18 +57,11 @@ function RowSkeleton() {
 export default function Loading() {
   return (
     <main className="min-h-[80vh] pb-16 pt-8">
-      <Container>
+      
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          {/* Title */}
-          <Skeleton className="h-[32px] w-[140px]" />
-
-          {/* Button */}
-          <Button disabled className="inline-flex gap-2 opacity-80">
-            <CirclePlus className="h-4 w-4 opacity-40" />
-            <span className="sr-only">Loading</span>
-            <Skeleton className="h-[14px] w-[110px]" />
-          </Button>
+    
+         
         </div>
 
         {/* Table */}
@@ -117,7 +110,7 @@ export default function Loading() {
             </TableBody>
           </Table>
         </div>
-      </Container>
+     
     </main>
   );
 }

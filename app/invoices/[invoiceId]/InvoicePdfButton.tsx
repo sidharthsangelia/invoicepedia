@@ -58,7 +58,7 @@ export default function InvoicePDFButton({ invoice }: InvoicePDFButtonProps) {
         className="gap-1.5 cursor-pointer"
         onClick={() => setDialogOpen(true)}
       >
-        <FileText className="h-3.5 w-3.5" />
+        
         Generate PDF
       </Button>
 

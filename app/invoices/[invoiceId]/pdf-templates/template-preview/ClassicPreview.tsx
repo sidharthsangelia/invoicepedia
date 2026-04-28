@@ -1,0 +1,138 @@
+
+
+export default function ClassicPreview() {
+  return (
+    <div
+      className="relative w-full rounded border border-gray-200 bg-white select-none"
+      style={{ height: 168, fontSize: 0 }}
+    >
+      <div className="px-4 py-3">
+        {/* Header */}
+        <div className="flex justify-between mb-3">
+          <div>
+            <div
+              className="font-bold tracking-widest text-black"
+              style={{ fontSize: 11 }}
+            >
+              INVOICE
+            </div>
+            <div className="text-gray-500 mt-0.5" style={{ fontSize: 5.5 }}>
+              INV-2025-001
+            </div>
+          </div>
+
+          <div className="text-right">
+            <div className="font-bold text-black" style={{ fontSize: 6.5 }}>
+              Your Company
+            </div>
+            <div className="text-gray-500" style={{ fontSize: 5 }}>
+              your@company.com
+            </div>
+          </div>
+        </div>
+
+        {/* Meta */}
+        <div className="flex justify-between mb-3">
+          <div>
+            <div
+              className="uppercase tracking-wider text-gray-500 mb-1"
+              style={{ fontSize: 4.5 }}
+            >
+              Bill To
+            </div>
+            <div className="font-medium text-black" style={{ fontSize: 6 }}>
+              Client Name
+            </div>
+            <div className="text-gray-500" style={{ fontSize: 5 }}>
+              client@email.com
+            </div>
+          </div>
+
+          <div className="text-right">
+            <div
+              className="uppercase tracking-wider text-gray-500 mb-1"
+              style={{ fontSize: 4.5 }}
+            >
+              Details
+            </div>
+            <div className="text-black" style={{ fontSize: 5 }}>
+              Issued Jan 1, 2025
+            </div>
+            <div className="text-gray-500" style={{ fontSize: 5 }}>
+              Due Jan 31, 2025
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-b border-black mb-2" />
+
+        {/* Table */}
+        <div>
+          {/* Header */}
+          <div className="flex pb-1 mb-1 border-b border-black">
+            <span className="flex-1 font-semibold" style={{ fontSize: 4.5 }}>
+              Description
+            </span>
+            <span
+              className="w-5 text-center font-semibold"
+              style={{ fontSize: 4.5 }}
+            >
+              Qty
+            </span>
+            <span
+              className="w-10 text-right font-semibold"
+              style={{ fontSize: 4.5 }}
+            >
+              Amount
+            </span>
+          </div>
+
+          {/* Rows */}
+          {[
+            ["Web Design", "1", "$1,200.00"],
+            ["Development", "3", "$3,600.00"],
+          ].map(([desc, qty, amt], i) => (
+            <div key={i} className="flex py-0.5">
+              <span className="flex-1 text-black" style={{ fontSize: 4.5 }}>
+                {desc}
+              </span>
+              <span
+                className="w-5 text-center text-gray-500"
+                style={{ fontSize: 4.5 }}
+              >
+                {qty}
+              </span>
+              <span
+                className="w-10 text-right text-black"
+                style={{ fontSize: 4.5 }}
+              >
+                {amt}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Total */}
+        <div className="flex justify-end mt-2">
+          <div
+            className="border-t border-black pt-1 font-semibold text-black"
+            style={{ fontSize: 6 }}
+          >
+            TOTAL $4,800.00
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-0 left-0 right-0 flex justify-between px-4 py-1 border-t border-gray-200">
+        <span className="text-gray-500" style={{ fontSize: 4.5 }}>
+          Thank you for your business.
+        </span>
+        <span className="text-gray-500" style={{ fontSize: 4.5 }}>
+          INV-2025-001
+        </span>
+      </div>
+    </div>
+  );
+}
