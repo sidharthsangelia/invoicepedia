@@ -28,10 +28,9 @@ import { Separator } from "@/components/ui/separator";
 import { createInvoiceAction } from "@/actions/createInvoice";
 import { updateInvoiceAction } from "@/actions/updateInvoice";
 import { toast } from "sonner";
+import { PreviewData } from "@/types/invoice";
 
-// -----------------------------------------------------------------------
-// Zod Schema
-// -----------------------------------------------------------------------
+// ── Zod Schema ────────────────────────────────────────────────────────────
 
 const lineItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
@@ -61,17 +60,15 @@ const invoiceFormSchema = z.object({
 
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
-// -----------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------
+// ── Helpers ───────────────────────────────────────────────────────────────
 
 const CURRENCIES = [
-  { label: "USD – US Dollar", value: "USD" },
-  { label: "EUR – Euro", value: "EUR" },
-  { label: "GBP – British Pound", value: "GBP" },
-  { label: "INR – Indian Rupee", value: "INR" },
-  { label: "CAD – Canadian Dollar", value: "CAD" },
-  { label: "AUD – Australian Dollar", value: "AUD" },
+  { label: "USD – US Dollar",        value: "USD" },
+  { label: "EUR – Euro",             value: "EUR" },
+  { label: "GBP – British Pound",    value: "GBP" },
+  { label: "INR – Indian Rupee",     value: "INR" },
+  { label: "CAD – Canadian Dollar",  value: "CAD" },
+  { label: "AUD – Australian Dollar",value: "AUD" },
 ];
 
 const DEFAULT_LINE_ITEM = { description: "", quantity: 1, unitAmount: 0 };
@@ -95,9 +92,7 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount);
 }
 
-// -----------------------------------------------------------------------
-// Sub-components
-// -----------------------------------------------------------------------
+// ── Sub-components ────────────────────────────────────────────────────────
 
 function FormField({
   label,
@@ -124,62 +119,70 @@ function FormField({
       {hint && !error && (
         <p className="text-xs text-muted-foreground">{hint}</p>
       )}
-      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+      {error && (
+        <p className="text-xs text-destructive font-medium">{error}</p>
+      )}
     </div>
   );
 }
 
-// -----------------------------------------------------------------------
-// Props
-// -----------------------------------------------------------------------
+// ── Props ─────────────────────────────────────────────────────────────────
 
 interface InvoiceFormProps {
   mode?: "create" | "edit";
-  invoiceId?: string; // required when mode === "edit"
+  invoiceId?: string;
   defaultValues?: Partial<InvoiceFormValues>;
+  /**
+   * Called with live form values (debounced 300 ms) whenever the user edits
+   * the form. Only provided in the split-screen builder — not present in the
+   * edit flow, so the prop is fully optional and has zero cost when absent.
+   */
+  onPreviewChange?: (data: PreviewData) => void;
 }
 
-// -----------------------------------------------------------------------
-// Main Component
-// -----------------------------------------------------------------------
+// ── Main Component ────────────────────────────────────────────────────────
 
 export function InvoiceForm({
   mode = "create",
   invoiceId,
   defaultValues,
+  onPreviewChange,
 }: InvoiceFormProps) {
   const [serverError, setServerError] = React.useState<string | null>(null);
   const isEdit = mode === "edit";
 
+  // Stable ref for the debounce timer — no re-renders
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
-      customerName: "",
-      customerEmail: "",
-      customerPhone: "",
+      customerName:    "",
+      customerEmail:   "",
+      customerPhone:   "",
       customerAddress: "",
-      invoiceNumber: "",
-      currency: "USD",
-      dueDate: "",
-      notes: "",
-      lineItems: [{ ...DEFAULT_LINE_ITEM }],
+      invoiceNumber:   "",
+      currency:        "USD",
+      dueDate:         "",
+      notes:           "",
+      lineItems:       [{ ...DEFAULT_LINE_ITEM }],
       ...defaultValues,
     },
   });
 
+  // ── Restore pending draft (unauthenticated redirect recovery) ─────────
   React.useEffect(() => {
     if (isEdit) return;
-
     const pending = sessionStorage.getItem("pendingInvoice");
     if (!pending) return;
-
     try {
       const saved = JSON.parse(pending) as InvoiceFormValues;
       form.reset(saved);
       sessionStorage.removeItem("pendingInvoice");
-      sessionStorage.removeItem("pendingRedirect"); // clean this up too
+      sessionStorage.removeItem("pendingRedirect");
       toast.info("Your invoice draft has been restored.", {
-        description: "We saved your progress while you signed in.",position: "top-right"
+        description: "We saved your progress while you signed in.",
+        position: "top-right",
       });
     } catch {
       sessionStorage.removeItem("pendingInvoice");
@@ -200,12 +203,49 @@ export function InvoiceForm({
   });
 
   const watchedLineItems = watch("lineItems");
-  const watchedCurrency = watch("currency");
+  const watchedCurrency  = watch("currency");
 
+  // ── Debounced preview emission ─────────────────────────────────────────
+  // Watches all form values and notifies the parent builder with a 300 ms
+  // debounce. Skipped entirely when onPreviewChange is not provided (edit
+  // mode, standalone form usage) so there is zero overhead in those cases.
+  React.useEffect(() => {
+    if (!onPreviewChange) return;
+
+    const subscription = form.watch((values) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+
+      debounceRef.current = setTimeout(() => {
+        onPreviewChange({
+          customerName:  values.customerName  ?? "",
+          customerEmail: values.customerEmail ?? "",
+          invoiceNumber: values.invoiceNumber ?? "",
+          dueDate:       values.dueDate       ?? "",
+          currency:      values.currency      ?? "USD",
+          lineItems: (values.lineItems ?? [])
+            .filter((item) => item !== undefined)
+            .map((item) => ({
+              description: item?.description ?? "",
+              quantity:    Number(item?.quantity)   || 0,
+              unitAmount:  Number(item?.unitAmount) || 0,
+            })),
+        });
+      }, 300);
+    });
+
+    // Cleanup: unsubscribe watcher + cancel any pending debounce on unmount
+    return () => {
+      subscription.unsubscribe();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [onPreviewChange, form]);
+
+  // ── Subtotal (for the form's own total display) ────────────────────────
   const subtotal = watchedLineItems.reduce((sum, item) => {
     return sum + (Number(item.quantity) || 0) * (Number(item.unitAmount) || 0);
   }, 0);
 
+  // ── Submit ─────────────────────────────────────────────────────────────
   async function onSubmit(values: InvoiceFormValues) {
     setServerError(null);
 
@@ -213,22 +253,19 @@ export function InvoiceForm({
 
     if (isEdit && invoiceId) formData.set("invoiceId", invoiceId);
 
-    formData.set("customerName", values.customerName);
+    formData.set("customerName",  values.customerName);
     formData.set("customerEmail", values.customerEmail);
-    if (values.customerPhone)
-      formData.set("customerPhone", values.customerPhone);
-    if (values.customerAddress)
-      formData.set("customerAddress", values.customerAddress);
-    if (values.invoiceNumber)
-      formData.set("invoiceNumber", values.invoiceNumber);
+    if (values.customerPhone)   formData.set("customerPhone",   values.customerPhone);
+    if (values.customerAddress) formData.set("customerAddress", values.customerAddress);
+    if (values.invoiceNumber)   formData.set("invoiceNumber",   values.invoiceNumber);
     formData.set("currency", values.currency);
     if (values.dueDate) formData.set("dueDate", values.dueDate);
-    if (values.notes) formData.set("notes", values.notes);
+    if (values.notes)   formData.set("notes",   values.notes);
 
     values.lineItems.forEach((item, i) => {
       formData.set(`lineItems[${i}][description]`, item.description);
-      formData.set(`lineItems[${i}][quantity]`, String(item.quantity));
-      formData.set(`lineItems[${i}][unitAmount]`, String(item.unitAmount));
+      formData.set(`lineItems[${i}][quantity]`,    String(item.quantity));
+      formData.set(`lineItems[${i}][unitAmount]`,  String(item.unitAmount));
     });
 
     try {
@@ -237,12 +274,7 @@ export function InvoiceForm({
 
       if (result && !result.success) {
         if (result.error === "UNAUTHENTICATED") {
-          // Save entire form state to sessionStorage
-          sessionStorage.setItem(
-            "pendingInvoice",
-            JSON.stringify(values), // values is already typed InvoiceFormValues
-          );
-      
+          sessionStorage.setItem("pendingInvoice",  JSON.stringify(values));
           sessionStorage.setItem("pendingRedirect", "/invoices/new");
           window.location.href = "/sign-up?redirect_url=/onboarding";
           return;
@@ -250,16 +282,11 @@ export function InvoiceForm({
         setServerError(result.error);
         toast.error(
           isEdit ? "Failed to update invoice" : "Failed to create invoice",
-          {
-            description: result.error,
-            richColors: true,
-            position: "top-right"
-          },
+          { description: result.error, richColors: true, position: "top-right" }
         );
         return;
       }
 
-      // Success
       const invoiceLabel = values.invoiceNumber || "Invoice";
       if (isEdit) {
         toast.success("Invoice updated", {
@@ -272,21 +299,23 @@ export function InvoiceForm({
         toast.success("Invoice created", {
           description: `${invoiceLabel} has been created and is ready to send.`,
           icon: <FileText className="h-4 w-4" />,
-          richColors: true, position: "top-right",
+          richColors: true,
+          position: "top-right",
         });
       }
     } catch (err: any) {
-      // NEXT_REDIRECT throws — let it propagate so navigation works
       if (err?.message?.includes("NEXT_REDIRECT")) throw err;
-
       const message = err?.message ?? "Something went wrong. Please try again.";
       setServerError(message);
       toast.error("Unexpected error", {
         description: message,
-        richColors: true, position: "top-right"
+        richColors: true,
+        position: "top-right",
       });
     }
   }
+
+  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
@@ -395,9 +424,7 @@ export function InvoiceForm({
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base">Invoice Details</CardTitle>
-          <CardDescription>
-            Invoice meta information and settings.
-          </CardDescription>
+          <CardDescription>Invoice meta information and settings.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           <Controller
@@ -504,7 +531,7 @@ export function InvoiceForm({
 
           <div className="space-y-2">
             {fields.map((field, index) => {
-              const qty = Number(watchedLineItems[index]?.quantity) || 0;
+              const qty  = Number(watchedLineItems[index]?.quantity)   || 0;
               const unit = Number(watchedLineItems[index]?.unitAmount) || 0;
               const lineTotal = qty * unit;
 
@@ -524,9 +551,7 @@ export function InvoiceForm({
                         <Input
                           {...f}
                           placeholder="Website design & development"
-                          aria-invalid={
-                            !!errors.lineItems?.[index]?.description
-                          }
+                          aria-invalid={!!errors.lineItems?.[index]?.description}
                           className={
                             errors.lineItems?.[index]?.description
                               ? "border-destructive focus-visible:ring-destructive/30"
@@ -558,7 +583,7 @@ export function InvoiceForm({
                             f.onChange(
                               e.target.value === ""
                                 ? ""
-                                : parseInt(e.target.value, 10),
+                                : parseInt(e.target.value, 10)
                             )
                           }
                           aria-invalid={!!errors.lineItems?.[index]?.quantity}
@@ -604,12 +629,10 @@ export function InvoiceForm({
                               f.onChange(
                                 e.target.value === ""
                                   ? ""
-                                  : parseFloat(e.target.value),
+                                  : parseFloat(e.target.value)
                               )
                             }
-                            aria-invalid={
-                              !!errors.lineItems?.[index]?.unitAmount
-                            }
+                            aria-invalid={!!errors.lineItems?.[index]?.unitAmount}
                           />
                         </div>
                         {errors.lineItems?.[index]?.unitAmount && (

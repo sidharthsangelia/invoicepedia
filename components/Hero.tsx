@@ -43,6 +43,7 @@ export default function Hero() {
               className="aspect-[16/9] h-auto w-xl md:h-auto md:w-full object-cover"
               height={1000}
               width={1000}
+              loading="eager"
             />
           </div>
         </div>

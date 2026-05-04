@@ -1,37 +1,53 @@
-import { InvoiceForm } from "@/components/InvoiceForm";
-import Container from "@/components/Container";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { redirect } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
+ 
+import { TemplateId } from "@/types/invoice";
+import InvoiceBuilder from "@/components/invoice/InvoiceBuilder";
+import { prisma } from "@/db/prisma";
 
 export const metadata = {
   title: "Create Invoice",
 };
 
-export default function NewInvoicePage() {
-  return (
-    <main className="min-h-full pb-16">
-      <Container>
-        {/* Page header */}
-        <div className="flex items-center gap-4 py-6 border-b border-border">
-          <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
-            <Link href="/dashboard" aria-label="Back to invoices">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Create Invoice</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Fill in the details below. New invoices start as <strong>Draft</strong>.
-            </p>
-          </div>
-        </div>
+// Valid template ids — used to sanitise the query param
+const VALID_TEMPLATES = new Set<TemplateId>(["classic", "modern", "mono", "luxe"]);
 
-        {/* Form */}
-        <div className="mt-8 max-w-3xl">
-          <InvoiceForm />
-        </div>
-      </Container>
-    </main>
+function resolveTemplate(param: string | undefined): TemplateId {
+  if (param && VALID_TEMPLATES.has(param as TemplateId)) {
+    return param as TemplateId;
+  }
+  // Fall back to classic if the param is missing or tampered with
+  return "classic";
+}
+
+interface NewInvoicePageProps {
+  searchParams: Promise<{ template?: string }>;
+}
+
+export default async function NewInvoicePage({ searchParams }: NewInvoicePageProps) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  // Resolve template from query param — sanitised, never throws
+  const { template } = await searchParams;
+  const templateId = resolveTemplate(template);
+
+  // Fetch only what the preview needs — no over-fetching
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: {
+      companyName:  true,
+      companyEmail: true,
+    },
+  });
+
+  return (
+    <InvoiceBuilder
+      initialTemplate={templateId}
+      userCompany={{
+        companyName:  user?.companyName  ?? null,
+        companyEmail: user?.companyEmail ?? null,
+      }}
+    />
   );
 }
